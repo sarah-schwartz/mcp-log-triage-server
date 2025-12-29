@@ -1,0 +1,27 @@
+[project]
+name = "mcp-log-triage-server"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Sarah Schwartz", email = "a0583214067@gmail.com" }
+]
+requires-python = ">=3.13"
+dependencies = [
+    "google-genai>=1.56.0",
+    "mcp>=1.25.0",
+    "python-dotenv>=1.2.1",
+]
+
+[project.scripts]
+mcp-log-triage-server = "mcp_log_triage_server:main"
+
+[build-system]
+requires = ["uv_build>=0.9.18,<0.10.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.2",
+    "ruff>=0.14.10",
+]
