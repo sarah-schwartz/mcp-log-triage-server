@@ -9,6 +9,9 @@ from typing import Any, Literal, Optional, Sequence
 
 from mcp.server.fastmcp import FastMCP
 
+from dotenv import load_dotenv
+from mcp_log_triage_server.ai_review import AIReviewConfig, review_non_error_logs
+
 from mcp_log_triage_server.log_service import default_parser, get_logs
 from mcp_log_triage_server.models import LogEntry, LogLevel
 
@@ -138,6 +141,11 @@ def triage_logs(
     hour: Optional[str] = None,
     week: Optional[str] = None,
     month: Optional[str] = None,
+    ai_review: bool = False,
+    ai_model: str = "gemini-2.5-flash-lite",
+    ai_min_confidence: float = 0.55,
+    ai_max_segments: int = 25,
+    ai_max_lines_total: int = 800,
 ) -> dict[str, Any]:
     # stdout must remain clean for stdio transport.
     sev = _parse_levels(levels)
@@ -160,6 +168,35 @@ def triage_logs(
         include_raw=include_raw,
     )
 
+    ai = None
+    ai_error = None
+    if ai_review:
+        try:
+            cfg = AIReviewConfig(
+                model=ai_model,
+                min_confidence=ai_min_confidence,
+                max_segments=ai_max_segments,
+                max_lines_total=ai_max_lines_total,
+            )
+            exclude = {e.line_no for e in entries}
+            ai_resp = review_non_error_logs(
+                log_path,
+                exclude_line_nos=exclude,
+                hours_lookback=effective_lookback,
+                since=window_since,
+                until=window_until,
+                sniff_lines=sniff_lines,
+                timestamp_policy=timestamp_policy,
+                cfg=cfg,
+            )
+            ai = {
+                "model": cfg.model,
+                "findings": [f.model_dump() for f in ai_resp.findings],
+            }
+        except Exception as e:
+            logging.getLogger(__name__).exception("AI review failed")
+            ai_error = str(e)
+
     return {
         "count": len(entries),
         "entries": [_entry_to_dict(e, include_raw=include_raw) for e in entries],
@@ -167,6 +204,7 @@ def triage_logs(
 
 
 def main() -> None:
+    load_dotenv()
     mcp.run(transport="stdio")
 
 
