@@ -10,6 +10,10 @@ from typing import Optional
 from mcp_log_triage_server.log_service import default_parser, get_logs
 from mcp_log_triage_server.models import LogLevel
 
+from dotenv import load_dotenv
+from mcp_log_triage_server.ai_review import AIReviewConfig, review_non_error_logs
+
+
 _WEEK_RE = re.compile(r"^(?P<y>\d{4})-W(?P<w>\d{2})$")
 _MONTH_RE = re.compile(r"^(?P<y>\d{4})-(?P<m>\d{2})$")
 _HOUR_RE = re.compile(r"^(?P<d>\d{4}-\d{2}-\d{2})T(?P<h>\d{2})$")
@@ -94,6 +98,7 @@ def _resolve_time_window(args: argparse.Namespace) -> tuple[Optional[datetime], 
 
 
 def main() -> None:
+    load_dotenv()
     p = argparse.ArgumentParser(description="Generic log triage (sniff + adaptive fast scan).")
     p.add_argument("log_path")
     p.add_argument(
@@ -109,6 +114,11 @@ def main() -> None:
     p.add_argument("--raw", dest="include_raw", action="store_true", help="Include raw line in results")
     p.add_argument("--no-raw", dest="include_raw", action="store_false", help="Exclude raw line from results")
     p.set_defaults(include_raw=True)
+    p.add_argument("--ai-review", action="store_true", help="Run Gemini second-pass review on non-error logs")
+    p.add_argument("--ai-model", default="gemini-2.5-flash-lite")
+    p.add_argument("--ai-min-confidence", type=float, default=0.55)
+    p.add_argument("--ai-max-segments", type=int, default=25)
+    p.add_argument("--ai-max-lines-total", type=int, default=800)
 
     # Lookback (simple mode)
     p.add_argument("--hours", type=int, default=24, help="Look back N hours (ignored when a time window is set)")
@@ -153,6 +163,39 @@ def main() -> None:
         print(f"{e.line_no} {ts} [{e.level.value}] {e.message}")
 
     print(f"\nFound {len(entries)} matching entries.")
+    if args.ai_review:
+        try:
+            cfg = AIReviewConfig(
+                model=args.ai_model,
+                min_confidence=args.ai_min_confidence,
+                max_segments=args.ai_max_segments,
+                max_lines_total=args.ai_max_lines_total,
+            )
+            exclude = {e.line_no for e in entries}
+            ai = review_non_error_logs(
+                str(path),
+                exclude_line_nos=exclude,
+                hours_lookback=hours_lookback,
+                since=since,
+                until=until,
+                sniff_lines=args.sniff_lines,
+                timestamp_policy=args.timestamp_policy,
+                cfg=cfg,
+            )
+        except Exception as e:
+            print(f"AI review failed: {e}", file=sys.stderr)
+            return
+
+        if not ai.findings:
+            print("\nAI review: no additional suspects found.")
+            return
+
+        print("\nAI review suspects:")
+        for f in ai.findings:
+            lines_s = ",".join(str(n) for n in f.line_numbers)
+            print(f"- [{f.severity_guess}] conf={f.confidence:.2f} lines={lines_s} :: {f.title}")
+            print(f"  Why: {f.rationale}")
+            print(f"  Next: {f.recommendation}\n")
 
 
 if __name__ == "__main__":
