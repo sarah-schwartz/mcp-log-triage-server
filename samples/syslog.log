@@ -1,0 +1,3 @@
+<34>Dec 29 10:06:00 myhost sshd: authentication failure for user=alice from=10.0.0.5
+<165>1 2025-12-29T10:06:01.003Z myhost app - ID47 - Disk quota exceeded on /var
+<13>1 2025-12-29T10:06:02.000Z myhost app - ID48 - Starting worker

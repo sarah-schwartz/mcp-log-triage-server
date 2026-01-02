@@ -1,27 +1,41 @@
 [project]
 name = "mcp-log-triage-server"
 version = "0.1.0"
-description = "Add your description here"
+description = "MCP server for triaging local log files."
 readme = "README.md"
-authors = [
-    { name = "Sarah Schwartz", email = "a0583214067@gmail.com" }
-]
-requires-python = ">=3.13"
+requires-python = ">=3.11"
+authors = [{ name = "Your Name" }]
+license = { text = "MIT" }
 dependencies = [
-    "google-genai>=1.56.0",
-    "mcp>=1.25.0",
-    "python-dotenv>=1.2.1",
+  "mcp>=0.1.0",
+  "pydantic>=2.7.0",
+]
+
+[project.optional-dependencies]
+ai = [
+  "google-genai>=0.3.0",
+]
+dev = [
+  "pytest>=8.0.0",
+  "pytest-asyncio>=0.23.0",
+  "ruff>=0.6.0",
 ]
 
 [project.scripts]
-mcp-log-triage-server = "mcp_log_triage_server.server:main"
+log-triage-mcp = "mcp_log_triage_server.server.log_server:main"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+ignore = []
 
 [build-system]
-requires = ["uv_build>=0.9.18,<0.10.0"]
-build-backend = "uv_build"
-
-[dependency-groups]
-dev = [
-    "pytest>=9.0.2",
-    "ruff>=0.14.10",
-]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
