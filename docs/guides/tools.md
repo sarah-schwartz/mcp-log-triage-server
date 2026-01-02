@@ -22,7 +22,7 @@ window and filters.
 - `include_ai_review` (bool, optional): split logs into identified entries and AI
   findings; defaults `levels` to `["WARNING", "ERROR", "CRITICAL"]`
 - `contains` (str, optional): substring filter applied to the raw line
-- `limit` (int, optional): number of entries to return (hard-capped at 5000)
+- `limit` (int, optional): accepted for compatibility but ignored
 - `include_raw` (bool, optional): include the original raw log line
 
 Time window precedence:
@@ -77,7 +77,6 @@ When `include_ai_review=true`, the response adds `ai_findings`:
   "log_path": "samples/bracket.log",
   "date": "2025-12-30",
   "levels": ["warning", "error", "critical"],
-  "contains": "timeout",
-  "limit": 100
+  "contains": "timeout"
 }
 ```

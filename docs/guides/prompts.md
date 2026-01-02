@@ -9,7 +9,7 @@ Prompts are reusable conversation templates that a client can invoke.
 
 - `summarize_resource(uri)`
   - Summarizes a resource by URI.
-- `triage_log_file(log_path, hours_lookback=24, levels="ERROR,WARNING,CRITICAL", limit=200)`
+- `triage_log_file(log_path, hours_lookback=24, levels="ERROR,WARNING,CRITICAL")`
   - Guides a user through log triage with a structured summary.
 - `create_bug_report(title, log_path, steps="", hours_lookback=24)`
   - Produces a Markdown bug report using log evidence.

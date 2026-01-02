@@ -86,7 +86,7 @@ def triage_logs(
     contains:
         Substring filter applied to the raw line.
     limit:
-        Maximum number of entries returned (hard-capped in the implementation).
+        Ignored; all matching entries are returned.
     include_raw:
         Whether to include the original raw log line in each entry.
 

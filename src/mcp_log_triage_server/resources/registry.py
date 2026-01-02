@@ -79,11 +79,10 @@ def register_resources(mcp: FastMCP) -> None:
 
     @mcp.resource("file://{path}")
     def read_file(path: str) -> str:
-        """Read a small text file from within LOG_TRIAGE_BASE_DIR.
+        """Read a text file from within LOG_TRIAGE_BASE_DIR.
 
         Hardening:
         - Only allows .log/.txt/.md (and gzip variants: *.log.gz, *.txt.gz, *.md.gz)
-        - Caps returned content size.
         """
         p = _safe_resolve(path)
 
@@ -96,16 +95,11 @@ def register_resources(mcp: FastMCP) -> None:
             if suffix not in ALLOWED_FILE_SUFFIXES:
                 raise ValueError("File type not allowed")
 
-        data = _open_text(p)
-        return data[:200_000]
+        return _open_text(p)
 
     @mcp.resource("log://{path}")
     def tail_log(path: str) -> str:
-        """Return the last N lines of a log file."""
-        DEFAULT_LINES = 300
+        """Return the full log contents."""
 
         p = _safe_resolve(path)
-        raw = _open_text(p)
-        parts = raw.splitlines()
-        return "\n".join(parts[-DEFAULT_LINES:])
-
+        return _open_text(p)

@@ -218,15 +218,9 @@ def get_logs(
     limit: int | None = None,
     **iter_kwargs,
 ) -> list[LogEntry]:
-    """Collect iter_entries into a list (optionally capped)."""
-    if limit is not None and limit <= 0:
-        raise ValueError("limit must be > 0")
+    """Collect iter_entries into a list.
 
-    it = iter_entries(log_path, **iter_kwargs)
-
-    out: list[LogEntry] = []
-    for entry in it:
-        out.append(entry)
-        if limit is not None and len(out) >= limit:
-            break
-    return out
+    limit is accepted for compatibility but ignored (all entries are returned).
+    """
+    _ = limit
+    return list(iter_entries(log_path, **iter_kwargs))

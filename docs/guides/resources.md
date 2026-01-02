@@ -20,9 +20,8 @@ Safety constraints:
 
 - Allowed extensions: `.log`, `.txt`, `.md` (and `.gz` variants)
 - Paths must stay inside `LOG_TRIAGE_BASE_DIR`
-- Output is capped to 200,000 characters
 
 ## Log Tail Resource
 
-`log://{path}` returns the last N lines of a log file using the same base
-directory rules as `file://{path}`.
+`log://{path}` returns the full log file contents using the same base directory
+rules as `file://{path}`.

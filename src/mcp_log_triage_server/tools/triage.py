@@ -15,8 +15,6 @@ from mcp_log_triage_server.core.log_service import default_parser, get_logs
 from mcp_log_triage_server.core.models import LogEntry, LogLevel
 from mcp_log_triage_server.core.time_window import resolve_time_window
 
-DEFAULT_LIMIT = 200
-HARD_LIMIT = 5000
 DEFAULT_LEVELS = ["WARNING", "ERROR"]
 DEFAULT_AI_IDENTIFIED_LEVELS = ["WARNING", "ERROR", "CRITICAL"]
 ALL_LEVELS = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
@@ -85,6 +83,7 @@ def triage_logs_impl(
     - include_all_levels overrides levels/DEFAULT_LEVELS
     - include_ai_review splits logs into identified vs AI review lines
     - include_ai_review cannot be combined with include_all_levels
+    - limit is accepted for compatibility but ignored (all entries are returned)
     """
     if include_all_levels and include_ai_review:
         raise ValueError("include_all_levels cannot be used with include_ai_review.")
@@ -97,13 +96,6 @@ def triage_logs_impl(
         levels_eff = DEFAULT_LEVELS
     else:
         levels_eff = levels
-    if limit is None:
-        limit = DEFAULT_LIMIT
-    if limit <= 0:
-        raise ValueError("limit must be > 0")
-    if limit > HARD_LIMIT:
-        limit = HARD_LIMIT
-
     window_since, window_until = resolve_time_window(
         since=since,
         until=until,
@@ -126,7 +118,6 @@ def triage_logs_impl(
             until=window_until,
             contains=contains,
             identified_levels=sev or [],
-            identified_limit=limit,
         )
         entries = result.identified_entries
         return {
@@ -143,7 +134,6 @@ def triage_logs_impl(
         until=window_until,
         severities=sev,
         contains=contains,
-        limit=limit,
         include_raw=include_raw,
     )
 

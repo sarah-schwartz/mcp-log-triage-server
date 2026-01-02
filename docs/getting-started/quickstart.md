@@ -23,8 +23,7 @@ The server exposes a single tool named `triage_logs`. Example payload:
 {
   "log_path": "samples/access.log",
   "date": "2025-12-31",
-  "levels": ["error", "critical"],
-  "limit": 200
+  "levels": ["error", "critical"]
 }
 ```
 

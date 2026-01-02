@@ -48,8 +48,6 @@ class AIReviewResponse(BaseModel):
 @dataclass(frozen=True, slots=True)
 class AIReviewConfig:
     model: str = "gemini-2.5-flash-lite"
-    max_segments: int = 25
-    max_lines_total: int = 800
     segment_max_lines: int = 40
 
     # Local-identified (not sent to AI)
@@ -97,41 +95,32 @@ def _split_entries_for_ai(
     *,
     exclude_line_nos: set[int],
     identified_levels: set[LogLevel],
-    identified_limit: int | None = None,
-    max_segments: int,
-    max_lines_total: int,
     segment_max_lines: int,
 ) -> tuple[list[LogEntry], list[list[LogEntry]]]:
     """Split entries into identified vs AI segments in a single pass.
 
     - exclude_line_nos applies to BOTH outputs
-    - Breaks early when AI budgets are reached (performance)
+    - All lines are processed; no line limits are enforced
     """
     identified: list[LogEntry] = []
     segments: list[list[LogEntry]] = []
     current: list[LogEntry] = []
-    total_ai_lines = 0
 
     for e in entries:
         if e.line_no in exclude_line_nos:
             continue
 
         if e.level in identified_levels:
-            if identified_limit is None or len(identified) < identified_limit:
-                identified.append(e)
+            identified.append(e)
             continue
 
-        if len(segments) >= max_segments or total_ai_lines >= max_lines_total:
-            break
-
         current.append(e)
-        total_ai_lines += 1
 
         if len(current) >= segment_max_lines:
             segments.append(current)
             current = []
 
-    if current and len(segments) < max_segments and total_ai_lines <= max_lines_total:
+    if current:
         segments.append(current)
 
     return identified, segments
@@ -250,9 +239,6 @@ def review_non_error_logs(
         it,
         exclude_line_nos=exclude_line_nos,
         identified_levels=set(cfg.identified_levels),
-        identified_limit=None,
-        max_segments=cfg.max_segments,
-        max_lines_total=cfg.max_lines_total,
         segment_max_lines=cfg.segment_max_lines,
     )
 
@@ -273,9 +259,13 @@ def triage_with_ai_review(
     identified_limit: int | None = None,
     cfg: AIReviewConfig | None = None,
 ) -> AITriageResult:
-    """Split logs into identified entries and AI findings."""
+    """Split logs into identified entries and AI findings.
+
+    Lines not in identified_levels are chunked and sent to the AI review.
+    """
     if cfg is None:
         cfg = AIReviewConfig()
+    _ = identified_limit
 
     identified_set = (
         set(identified_levels)
@@ -304,9 +294,6 @@ def triage_with_ai_review(
         it,
         exclude_line_nos=exclude_line_nos,
         identified_levels=identified_set,
-        identified_limit=identified_limit,
-        max_segments=cfg.max_segments,
-        max_lines_total=cfg.max_lines_total,
         segment_max_lines=cfg.segment_max_lines,
     )
 

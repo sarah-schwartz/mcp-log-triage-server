@@ -32,7 +32,6 @@ def register_prompts(mcp: FastMCP) -> None:
         log_path: str,
         hours_lookback: int = 24,
         levels: str = "ERROR,WARNING,CRITICAL",
-        limit: int = 200,
     ) -> list[dict[str, Any]]:
         return [
             {
@@ -54,7 +53,6 @@ def register_prompts(mcp: FastMCP) -> None:
                     f"- log_path: {log_path}\n"
                     f"- hours_lookback: {hours_lookback}\n"
                     f"- levels: {levels}\n"
-                    f"- limit: {limit}\n"
                 ),
             },
             {
