@@ -4,8 +4,8 @@ from pathlib import Path
 
 import pytest
 
-from mcp_log_triage_server.core import ai_review as ai_module
 from mcp_log_triage_server.core.ai_review import AIFinding, AIReviewResponse
+from mcp_log_triage_server.core.ai_review import service as ai_service
 from mcp_log_triage_server.tools.triage import triage_logs_impl
 
 
@@ -126,7 +126,7 @@ def test_triage_logs_impl_include_ai_review(tmp_path: Path, monkeypatch) -> None
             ]
         )
 
-    monkeypatch.setattr(ai_module, "_call_gemini_json", fake_call)
+    monkeypatch.setattr(ai_service, "_call_gemini_json", fake_call)
 
     out = triage_logs_impl(
         log_path=str(log),
