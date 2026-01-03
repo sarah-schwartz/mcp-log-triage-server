@@ -65,6 +65,9 @@ def triage_logs_impl(
     hour: str | None = None,
     week: str | None = None,
     month: str | None = None,
+    year: str | None = None,
+    days_lookback: int | None = None,
+    hours_lookback: int | None = None,
     levels: list[str] | None = None,
     contains: str | None = None,
     limit: int | None = None,
@@ -80,8 +83,10 @@ def triage_logs_impl(
         Path to a local log file. Plain text and .gz files are supported.
     since, until : str | None
         ISO-8601 datetimes. If timezone is omitted, UTC is assumed.
-    date, hour, week, month : str | None
+    date, hour, week, month, year : str | None
         Convenience selectors for common time windows.
+    days_lookback, hours_lookback : int | None
+        Relative lookback window size. Use one or the other.
     levels : list[str] | None
         Severity filter, case-insensitive. Defaults are applied when omitted.
     contains : str | None
@@ -102,7 +107,7 @@ def triage_logs_impl(
 
     Notes
     -----
-    - Time window precedence: date/hour/week/month > since/until > last 24 hours
+    - Time window precedence: selectors > lookback > since/until > last 24 hours
     - include_ai_review cannot be combined with include_all_levels
     """
     if include_all_levels and include_ai_review:
@@ -123,6 +128,9 @@ def triage_logs_impl(
         hour=hour,
         week=week,
         month=month,
+        year=year,
+        days_lookback=days_lookback,
+        hours_lookback=hours_lookback,
     )
     # If resolve_time_window produced any bound, treat it as an explicit window
     has_window = (window_since is not None) or (window_until is not None)
