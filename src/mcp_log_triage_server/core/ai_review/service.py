@@ -8,81 +8,23 @@ from __future__ import annotations
 import hashlib
 import logging
 import os
-import re
 import time
 from collections.abc import Iterable
-from dataclasses import dataclass
 from datetime import datetime
-from typing import Literal
 
-from pydantic import BaseModel, Field
-
-from .log_service import iter_entries
-from .models import LogEntry, LogLevel
+from ..log_service import iter_entries
+from ..models import LogEntry, LogLevel
+from .models import AIFinding, AIReviewConfig, AIReviewResponse, AITriageResult
+from .prompt import build_ai_review_prompt
+from .redaction import redact_text
 
 logger = logging.getLogger(__name__)
-
-_EMAIL_RE = re.compile(r"(?i)\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b")
-_IPV4_RE = re.compile(r"\b(?:\d{1,3}\.){3}\d{1,3}\b")
-_JWT_RE = re.compile(r"\beyJ[a-zA-Z0-9_-]{10,}\.[a-zA-Z0-9_-]{10,}\.[a-zA-Z0-9_-]{10,}\b")
-_LONG_TOKEN_RE = re.compile(r"\b[a-zA-Z0-9_\-]{32,}\b")
-
-
-class AIFinding(BaseModel):
-    line_numbers: list[int] = Field(description="Relevant log line numbers.")
-    severity_guess: Literal["low", "medium", "high"] = Field(
-        description="Estimated incident severity."
-    )
-    confidence: float = Field(ge=0.0, le=1.0, description="0..1 confidence for this finding.")
-    title: str = Field(description="Short title of the suspected issue.")
-    rationale: str = Field(description="Why these lines may indicate an error/incident.")
-    recommendation: str = Field(description="Next debugging step to confirm or mitigate.")
-
-
-class AIReviewResponse(BaseModel):
-    findings: list[AIFinding] = Field(default_factory=list)
-
-
-@dataclass(frozen=True, slots=True)
-class AIReviewConfig:
-    model: str = "gemini-2.5-flash-lite"
-    segment_max_lines: int = 40
-
-    # Local-identified (not sent to AI)
-    identified_levels: tuple[LogLevel, ...] = (
-        LogLevel.ERROR,
-        LogLevel.WARNING,
-        LogLevel.CRITICAL,
-    )
-
-    # Levels that are sent to the AI review stage.
-    ai_levels: tuple[LogLevel, ...] = (
-        LogLevel.INFO,
-        LogLevel.DEBUG,
-        LogLevel.UNKNOWN,
-    )
-
-    min_confidence: float = 0.55
-    temperature: float = 0.0
-    redact: bool = True
-    max_retries: int = 3
-
-
-@dataclass(frozen=True, slots=True)
-class AITriageResult:
-    """Split output for local triage + AI findings."""
-
-    identified_entries: list[LogEntry]
-    ai_review: AIReviewResponse
+_AI_REVIEW_SCHEMA = AIReviewResponse.model_json_schema()
 
 
 def _redact(text: str) -> str:
     """Redact sensitive tokens from log text."""
-    text = _JWT_RE.sub("<REDACTED_JWT>", text)
-    text = _EMAIL_RE.sub("<REDACTED_EMAIL>", text)
-    text = _IPV4_RE.sub("<REDACTED_IP>", text)
-    text = _LONG_TOKEN_RE.sub("<REDACTED_TOKEN>", text)
-    return text
+    return redact_text(text)
 
 
 def _fmt_line(e: LogEntry) -> str:
@@ -146,7 +88,7 @@ def _call_gemini_json(prompt: str, *, cfg: AIReviewConfig) -> AIReviewResponse:
                 contents=prompt,
                 config={
                     "response_mime_type": "application/json",
-                    "response_json_schema": AIReviewResponse.model_json_schema(),
+                    "response_json_schema": _AI_REVIEW_SCHEMA,
                     "temperature": cfg.temperature,
                 },
             )
@@ -164,7 +106,12 @@ def _call_gemini_json(prompt: str, *, cfg: AIReviewConfig) -> AIReviewResponse:
     ) from last_err
 
 
-def _review_segments(segments: list[list[LogEntry]], *, cfg: AIReviewConfig) -> AIReviewResponse:
+def _review_segments(
+    segments: list[list[LogEntry]],
+    *,
+    cfg: AIReviewConfig,
+    identified_levels: Iterable[LogLevel],
+) -> AIReviewResponse:
     """Review segments with the AI model and filter findings."""
     if not segments:
         return AIReviewResponse(findings=[])
@@ -182,18 +129,7 @@ def _review_segments(segments: list[list[LogEntry]], *, cfg: AIReviewConfig) -> 
             continue
         seen_hashes.add(h)
 
-        prompt = (
-            "You are a log triage assistant.\n"
-            "You will be given application log lines that are NOT classified as "
-            "WARNING/ERROR/CRITICAL.\n"
-            "Identify whether these lines likely indicate a hidden error or incident signal.\n"
-            "Return ONLY valid JSON that matches the provided schema.\n"
-            "Rules:\n"
-            "- Only use evidence from the given lines.\n"
-            "- Prefer fewer, higher-quality findings.\n"
-            "- If nothing looks like an incident, return an empty findings array.\n\n"
-            f"LOG LINES:\n{text}\n"
-        )
+        prompt = build_ai_review_prompt(text, identified_levels=identified_levels)
 
         resp = _call_gemini_json(prompt, cfg=cfg)
         for f in resp.findings:
@@ -240,7 +176,11 @@ def review_non_error_logs(
         segment_max_lines=cfg.segment_max_lines,
     )
 
-    return _review_segments(segments, cfg=cfg)
+    return _review_segments(
+        segments,
+        cfg=cfg,
+        identified_levels=cfg.identified_levels,
+    )
 
 
 def triage_with_ai_review(
@@ -292,5 +232,9 @@ def triage_with_ai_review(
 
     return AITriageResult(
         identified_entries=identified,
-        ai_review=_review_segments(segments, cfg=cfg),
+        ai_review=_review_segments(
+            segments,
+            cfg=cfg,
+            identified_levels=identified_set,
+        ),
     )
