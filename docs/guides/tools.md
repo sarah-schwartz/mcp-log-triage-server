@@ -34,6 +34,17 @@ ISO-8601 datetimes. If timezone is omitted, UTC is assumed.
 `month` (str, optional)
 `YYYY-MM` calendar month selector.
 
+`year` (str, optional)
+`YYYY` calendar year selector.
+
+`days_lookback` (int, optional)
+Relative lookback window in days.
+
+`hours_lookback` (int, optional)
+Relative lookback window in hours.
+
+Only one lookback value should be set at a time.
+
 `levels` (list[str], optional)
 Severity filter, case-insensitive. Defaults to `["WARNING", "ERROR"]` unless
 `include_ai_review=true`, which defaults to `["WARNING", "ERROR", "CRITICAL"]`.
@@ -57,12 +68,14 @@ Whether to include the original raw log line in each entry.
 
 Selector precedence:
 
-1. `date` / `hour` / `week` / `month`
-2. `since` / `until`
-3. fallback to last 24 hours
+1. `date` / `hour` / `week` / `month` / `year`
+2. `days_lookback` / `hours_lookback`
+3. `since` / `until`
+4. fallback to last 24 hours
 
 Only one selector should be used at a time. If both a selector and `since`/`until`
-are provided, the selector takes precedence.
+are provided, the selector takes precedence. Lookback values also override
+`since`/`until` when both are provided.
 
 ## AI Review Notes
 
