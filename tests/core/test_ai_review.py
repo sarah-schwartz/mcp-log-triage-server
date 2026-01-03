@@ -1,12 +1,13 @@
 from __future__ import annotations
 
-from mcp_log_triage_server.core import ai_review as ai_module
 from mcp_log_triage_server.core.ai_review import (
     AIFinding,
     AIReviewResponse,
     _redact,
     _split_entries_for_ai,
+    review_non_error_logs,
 )
+from mcp_log_triage_server.core.ai_review import service as ai_service
 from mcp_log_triage_server.core.models import LogEntry, LogLevel
 
 
@@ -100,9 +101,9 @@ def test_review_non_error_logs_excludes_identified_levels(tmp_path, monkeypatch)
             ]
         )
 
-    monkeypatch.setattr(ai_module, "_call_gemini_json", fake_call)
+    monkeypatch.setattr(ai_service, "_call_gemini_json", fake_call)
 
-    ai_module.review_non_error_logs(
+    review_non_error_logs(
         log_path=str(log_path),
         exclude_line_nos=set(),
         hours_lookback=None,
