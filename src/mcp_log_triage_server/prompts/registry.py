@@ -11,8 +11,10 @@ from mcp.server.fastmcp import FastMCP
 
 
 def register_prompts(mcp: FastMCP) -> None:
+    """Register prompt templates on the MCP server."""
     @mcp.prompt()
     def summarize_resource(uri: str) -> list[dict[str, Any]]:
+        """Build a prompt that summarizes a resource URI."""
         return [
             {
                 "role": "system",
@@ -32,8 +34,8 @@ def register_prompts(mcp: FastMCP) -> None:
         log_path: str,
         hours_lookback: int = 24,
         levels: str = "ERROR,WARNING,CRITICAL",
-        limit: int = 200,
     ) -> list[dict[str, Any]]:
+        """Build a prompt for structured log triage."""
         return [
             {
                 "role": "system",
@@ -54,7 +56,6 @@ def register_prompts(mcp: FastMCP) -> None:
                     f"- log_path: {log_path}\n"
                     f"- hours_lookback: {hours_lookback}\n"
                     f"- levels: {levels}\n"
-                    f"- limit: {limit}\n"
                 ),
             },
             {
@@ -76,6 +77,7 @@ def register_prompts(mcp: FastMCP) -> None:
         steps: str = "",
         hours_lookback: int = 24,
     ) -> list[dict[str, Any]]:
+        """Build a prompt that produces a Markdown bug report."""
         return [
             {
                 "role": "system",

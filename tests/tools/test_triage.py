@@ -33,7 +33,6 @@ def test_triage_logs_impl_filters_levels_and_contains(tmp_path: Path) -> None:
         date="2025-12-30",
         levels=["error", "critical"],
         contains="route=",
-        limit=10,
         include_raw=False,
     )
 
@@ -53,7 +52,6 @@ def test_triage_logs_impl_include_all_levels_overrides_levels(tmp_path: Path) ->
         date="2025-12-30",
         levels=["error"],
         include_all_levels=True,
-        limit=10,
     )
 
     assert out["count"] == 4
@@ -71,14 +69,6 @@ def test_triage_logs_impl_invalid_level(tmp_path: Path) -> None:
         )
 
 
-def test_triage_logs_impl_limit_validation(tmp_path: Path) -> None:
-    log = tmp_path / "app.log"
-    _write_log(log)
-
-    with pytest.raises(ValueError):
-        triage_logs_impl(log_path=str(log), date="2025-12-30", limit=0)
-
-
 def test_triage_logs_impl_include_raw(tmp_path: Path) -> None:
     log = tmp_path / "app.log"
     _write_log(log)
@@ -88,7 +78,6 @@ def test_triage_logs_impl_include_raw(tmp_path: Path) -> None:
         date="2025-12-30",
         levels=["error"],
         include_raw=True,
-        limit=10,
     )
 
     assert out["count"] == 1
@@ -119,7 +108,6 @@ def test_triage_logs_impl_include_ai_review(tmp_path: Path, monkeypatch) -> None
         log_path=str(log),
         date="2025-12-30",
         include_ai_review=True,
-        limit=10,
     )
 
     assert out["count"] == 3
@@ -138,3 +126,16 @@ def test_triage_logs_impl_include_ai_review_conflicts(tmp_path: Path) -> None:
             include_ai_review=True,
             include_all_levels=True,
         )
+
+
+def test_triage_logs_impl_ignores_limit(tmp_path: Path) -> None:
+    log = tmp_path / "app.log"
+    _write_log(log)
+
+    out = triage_logs_impl(
+        log_path=str(log),
+        date="2025-12-30",
+        limit=1,
+    )
+
+    assert out["count"] == 2

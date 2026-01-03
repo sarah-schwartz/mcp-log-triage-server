@@ -15,8 +15,6 @@ from mcp_log_triage_server.core.log_service import default_parser, get_logs
 from mcp_log_triage_server.core.models import LogEntry, LogLevel
 from mcp_log_triage_server.core.time_window import resolve_time_window
 
-DEFAULT_LIMIT = 200
-HARD_LIMIT = 5000
 DEFAULT_LEVELS = ["WARNING", "ERROR"]
 DEFAULT_AI_IDENTIFIED_LEVELS = ["WARNING", "ERROR", "CRITICAL"]
 ALL_LEVELS = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
@@ -74,16 +72,37 @@ def triage_logs_impl(
     include_all_levels: bool = False,
     include_ai_review: bool = False,
 ) -> dict[str, Any]:
-    """Implementation for the `triage_logs` MCP tool.
+    """Return structured log entries and optional AI findings.
+
+    Parameters
+    ----------
+    log_path : str
+        Path to a local log file. Plain text and .gz files are supported.
+    since, until : str | None
+        ISO-8601 datetimes. If timezone is omitted, UTC is assumed.
+    date, hour, week, month : str | None
+        Convenience selectors for common time windows.
+    levels : list[str] | None
+        Severity filter, case-insensitive. Defaults are applied when omitted.
+    contains : str | None
+        Substring filter applied to the raw line.
+    limit : int | None
+        Accepted for compatibility but ignored.
+    include_raw : bool
+        Whether to include the original raw line in each entry.
+    include_all_levels : bool
+        When true, ignore levels and include all severities.
+    include_ai_review : bool
+        When true, split logs into identified entries and AI findings.
+
+    Returns
+    -------
+    dict[str, Any]
+        Payload with `count`, `entries`, and optional `ai_findings`.
 
     Notes
     -----
-    - Time window selection precedence:
-        1) explicit since/until
-        2) date/hour/week/month selectors
-        3) fallback to last 24 hours
-    - include_all_levels overrides levels/DEFAULT_LEVELS
-    - include_ai_review splits logs into identified vs AI review lines
+    - Time window precedence: date/hour/week/month > since/until > last 24 hours
     - include_ai_review cannot be combined with include_all_levels
     """
     if include_all_levels and include_ai_review:
@@ -97,13 +116,6 @@ def triage_logs_impl(
         levels_eff = DEFAULT_LEVELS
     else:
         levels_eff = levels
-    if limit is None:
-        limit = DEFAULT_LIMIT
-    if limit <= 0:
-        raise ValueError("limit must be > 0")
-    if limit > HARD_LIMIT:
-        limit = HARD_LIMIT
-
     window_since, window_until = resolve_time_window(
         since=since,
         until=until,
@@ -126,7 +138,6 @@ def triage_logs_impl(
             until=window_until,
             contains=contains,
             identified_levels=sev or [],
-            identified_limit=limit,
         )
         entries = result.identified_entries
         return {
@@ -143,7 +154,6 @@ def triage_logs_impl(
         until=window_until,
         severities=sev,
         contains=contains,
-        limit=limit,
         include_raw=include_raw,
     )
 

@@ -5,34 +5,71 @@ description: Tool reference for log triage.
 
 # `triage_logs`
 
-Return structured log entries from a file, optionally constrained by a time
-window and filters.
+Return structured log entries from a file, optionally constrained by time
+windows and filters. This is the primary tool exposed by the server.
+
+## Purpose
+
+Use this tool to scan local logs for relevant incidents without loading the
+entire file into memory. The server can prefilter large logs and then parse
+recognized formats for structured output.
 
 ## Inputs
 
-- `log_path` (str): path to a local log file (plain text or `.gz`)
-- `since` / `until` (str, optional): ISO-8601 datetimes
-- `date` (str, optional): `YYYY-MM-DD`
-- `hour` (str, optional): `YYYY-MM-DDTHH`
-- `week` (str, optional): `YYYY-Www`
-- `month` (str, optional): `YYYY-MM`
-- `levels` (list[str], optional): severity filter, case-insensitive (defaults to
-  `["WARNING", "ERROR"]`)
-- `include_all_levels` (bool, optional): return all severities and ignore `levels`
-- `include_ai_review` (bool, optional): split logs into identified entries and AI
-  findings; defaults `levels` to `["WARNING", "ERROR", "CRITICAL"]`
-- `contains` (str, optional): substring filter applied to the raw line
-- `limit` (int, optional): number of entries to return (hard-capped at 5000)
-- `include_raw` (bool, optional): include the original raw log line
+`log_path` (str)
+Path to a local log file. Plain text and `.gz` files are supported.
 
-Time window precedence:
+`since` / `until` (str, optional)
+ISO-8601 datetimes. If timezone is omitted, UTC is assumed.
+
+`date` (str, optional)
+`YYYY-MM-DD` selector for a full UTC day window.
+
+`hour` (str, optional)
+`YYYY-MM-DDTHH` selector for a single UTC hour.
+
+`week` (str, optional)
+`YYYY-Www` ISO week selector.
+
+`month` (str, optional)
+`YYYY-MM` calendar month selector.
+
+`levels` (list[str], optional)
+Severity filter, case-insensitive. Defaults to `["WARNING", "ERROR"]` unless
+`include_ai_review=true`, which defaults to `["WARNING", "ERROR", "CRITICAL"]`.
+
+`include_all_levels` (bool, optional)
+When true, ignore `levels` and return all severities.
+
+`include_ai_review` (bool, optional)
+When true, split logs into identified entries and AI findings.
+
+`contains` (str, optional)
+Substring filter applied to the raw line.
+
+`limit` (int, optional)
+Accepted for compatibility but ignored.
+
+`include_raw` (bool, optional)
+Whether to include the original raw log line in each entry.
+
+## Time Window Behavior
+
+Selector precedence:
 
 1. `date` / `hour` / `week` / `month`
 2. `since` / `until`
 3. fallback to last 24 hours
 
-Note: `include_ai_review` cannot be combined with `include_all_levels`.
-AI review requires `GEMINI_API_KEY` or `GOOGLE_API_KEY`.
+Only one selector should be used at a time. If both a selector and `since`/`until`
+are provided, the selector takes precedence.
+
+## AI Review Notes
+
+- `include_ai_review` cannot be combined with `include_all_levels`
+- Requires `GEMINI_API_KEY` or `GOOGLE_API_KEY`
+- AI review only evaluates non-identified levels; identified entries are still
+  returned in `entries`
 
 ## Output
 
@@ -70,6 +107,12 @@ When `include_ai_review=true`, the response adds `ai_findings`:
 }
 ```
 
+## Errors You May See
+
+- `FileNotFoundError`: `log_path` does not exist
+- `ValueError`: invalid time windows or unknown level names
+- `RuntimeError`: missing API key or AI client dependency (AI review only)
+
 ## Example
 
 ```json
@@ -77,7 +120,6 @@ When `include_ai_review=true`, the response adds `ai_findings`:
   "log_path": "samples/bracket.log",
   "date": "2025-12-30",
   "levels": ["warning", "error", "critical"],
-  "contains": "timeout",
-  "limit": 100
+  "contains": "timeout"
 }
 ```

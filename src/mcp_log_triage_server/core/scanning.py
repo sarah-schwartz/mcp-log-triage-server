@@ -102,11 +102,7 @@ def iter_hits(
     detected: DetectedFormat | None = None,
     sample_lines: int = 120,
 ) -> Iterator[LogHit]:
-    """Adaptive fast scan based on sniffed format.
-    - ACCESS: extract HTTP status -> yield 4xx/5xx
-    - SYSLOG: extract PRI -> map severity -> yield WARNING/ERROR/CRITICAL
-    - JSONL/BRACKET/UNKNOWN: token scan using ScanConfig
-    """
+    """Yield fast-scan hits using format-aware scanning."""
     scan = scan or default_scan_config()
 
     path = Path(log_path)
@@ -126,6 +122,7 @@ def iter_hits(
 
 
 def _iter_access_hits(path: Path) -> Iterator[LogHit]:
+    """Yield warning/error hits based on access-log status codes."""
     with path.open("rb") as f:
         for line_no, raw in enumerate(f, start=1):
             m = _ACCESS_RE.match(raw)
@@ -138,6 +135,7 @@ def _iter_access_hits(path: Path) -> Iterator[LogHit]:
 
 
 def _iter_syslog_hits(path: Path) -> Iterator[LogHit]:
+    """Yield warning/error hits based on syslog PRI severity."""
     with path.open("rb") as f:
         for line_no, raw in enumerate(f, start=1):
             m = _SYSLOG_PRI_RE.match(raw)
@@ -150,6 +148,7 @@ def _iter_syslog_hits(path: Path) -> Iterator[LogHit]:
 
 
 def _iter_token_hits(path: Path, *, scan: ScanConfig) -> Iterator[LogHit]:
+    """Yield hits using the configured byte token scan."""
     with path.open("rb") as f:
         for line_no, raw in enumerate(f, start=1):
             hay = raw.upper() if scan.case_insensitive else raw

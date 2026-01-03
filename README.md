@@ -1,47 +1,51 @@
-# mcp-log-triage-server
+# Log Triage MCP Server
 
-An MCP server that exposes tools, resources, and prompts to triage local log files.
+Local MCP server that exposes tools, resources, and prompts to triage log files.
 
-## Features
+## What It Does
 
-- `triage_logs` tool with time-window selectors, severity filters, and fast prefiltering
-- Built-in parsers for syslog, access logs, JSON lines, and bracketed timestamps
-- Resources and prompts for MCP clients that support them
-- Optional AI review pipeline for non-error signals (Gemini-based)
+- Parses common log formats (syslog, access logs, JSON lines, bracketed timestamps)
+- Filters by time window, severity, and substring
+- Exposes resources for sample data and scoped file/log access
+- Optionally reviews non-error signals with a Gemini-based pipeline
 
-## Quickstart
+## Requirements
+
+- Python 3.11+
+- Local access to the log files you want to analyze
+
+## Run Locally (stdio)
 
 ```bash
-python -m venv .venv
+uv venv
 source .venv/bin/activate  # Windows: .venv\Scripts\activate
-pip install -e .
-```
-
-Run the server over stdio:
-
-```bash
+uv pip install -e .
 python -m mcp_log_triage_server
 ```
 
-Example tool payload:
+## Example Tool Call
 
 ```json
 {
   "log_path": "samples/access.log",
   "date": "2025-12-31",
   "levels": ["error", "critical"],
-  "limit": 200
+  "include_raw": true
 }
 ```
 
 ## Documentation
 
 - `docs/index.md`
+- `docs/getting-started/installation.md`
 - `docs/getting-started/quickstart.md`
 - `docs/guides/tools.md`
 - `docs/guides/resources.md`
 - `docs/guides/prompts.md`
+- `docs/guides/ai-review.md`
 - `docs/reference/configuration.md`
+- `docs/reference/log-formats.md`
+- `docs/reference/cli.md`
 - `docs/development/architecture.md`
 - `docs/development/testing.md`
 
@@ -55,26 +59,3 @@ Example tool payload:
 - `tests`: mirrors `src` structure
 - `docs`: structured documentation
 - `samples`: example log files
-
-## Development
-
-Lint and format:
-
-```bash
-ruff check .
-ruff format .
-```
-
-Run tests:
-
-```bash
-pytest -q
-```
-
-## Contributing
-
-See `CONTRIBUTING.md`.
-
-## License
-
-MIT

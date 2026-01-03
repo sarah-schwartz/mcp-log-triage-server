@@ -26,10 +26,7 @@ from .scanning import DetectedFormat, iter_hits, sniff_format
 
 
 def _open_text(path: Path, *, encoding: str, decode_errors: str):
-    """Open a log file for text reading.
-
-    Supports plain text files and gzip-compressed files ('.gz').
-    """
+    """Open a log file for text reading (plain or gzip)."""
     if path.suffix.lower() == ".gz":
         return gzip.open(path, mode="rt", encoding=encoding, errors=decode_errors)
     return path.open("r", encoding=encoding, errors=decode_errors)
@@ -112,7 +109,7 @@ def iter_entries(
     sniff_lines: int = 120,
     include_raw: bool = True,
 ) -> Iterator[LogEntry]:
-    """Yield parsed entries after optional fast prefilter and filtering."""
+    """Yield parsed entries after optional prefiltering and filtering."""
     path = Path(log_path)
     if not path.is_file():
         raise FileNotFoundError(f"Log file not found: {path}")
@@ -141,7 +138,7 @@ def iter_entries(
         if not allowed:
             return
 
-    # NEW: bytes prefilter for contains in fast path (avoid decode)
+    # Precompute bytes filter to avoid decoding in the fast path.
     contains_b: bytes | None = None
     if contains is not None:
         contains_b = contains.encode(encoding, errors="ignore")
@@ -163,7 +160,7 @@ def iter_entries(
     # Fast path: scan candidates first only when format is recognized.
     if fast_prefilter and detected != DetectedFormat.UNKNOWN:
         for hit in iter_hits(path, scan=scan, detected=detected, sample_lines=sniff_lines):
-            # NEW: bytes contains check before decoding (big win on huge logs)
+            # Filter by bytes before decoding to save work on large logs.
             if contains_b is not None and contains_b not in hit.raw_line:
                 continue
 
@@ -218,15 +215,6 @@ def get_logs(
     limit: int | None = None,
     **iter_kwargs,
 ) -> list[LogEntry]:
-    """Collect iter_entries into a list (optionally capped)."""
-    if limit is not None and limit <= 0:
-        raise ValueError("limit must be > 0")
-
-    it = iter_entries(log_path, **iter_kwargs)
-
-    out: list[LogEntry] = []
-    for entry in it:
-        out.append(entry)
-        if limit is not None and len(out) >= limit:
-            break
-    return out
+    """Collect iter_entries into a list (limit is ignored)."""
+    _ = limit
+    return list(iter_entries(log_path, **iter_kwargs))

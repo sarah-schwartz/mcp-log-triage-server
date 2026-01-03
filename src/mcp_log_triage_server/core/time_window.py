@@ -21,6 +21,7 @@ def parse_iso_dt(s: str) -> datetime:
 
 
 def range_for_date(s: str) -> tuple[datetime, datetime]:
+    """Return the UTC day window for an ISO date string."""
     d = date.fromisoformat(s)
     start = datetime(d.year, d.month, d.day, tzinfo=UTC)
     end = start + timedelta(days=1)
@@ -28,7 +29,7 @@ def range_for_date(s: str) -> tuple[datetime, datetime]:
 
 
 def range_for_hour(s: str) -> tuple[datetime, datetime]:
-    # Format: YYYY-MM-DDTHH  (e.g., 2025-12-29T10)
+    """Return the UTC hour window for a YYYY-MM-DDTHH selector."""
     base = datetime.fromisoformat(s)
     if base.tzinfo is None:
         base = base.replace(tzinfo=UTC)
@@ -38,6 +39,7 @@ def range_for_hour(s: str) -> tuple[datetime, datetime]:
 
 
 def range_for_week(s: str) -> tuple[datetime, datetime]:
+    """Return the UTC week window for a YYYY-Www selector."""
     m = _WEEK_RE.match(s)
     if not m:
         raise ValueError("week must look like YYYY-Www (e.g., 2025-W52)")
@@ -50,6 +52,7 @@ def range_for_week(s: str) -> tuple[datetime, datetime]:
 
 
 def range_for_month(s: str) -> tuple[datetime, datetime]:
+    """Return the UTC month window for a YYYY-MM selector."""
     m = _MONTH_RE.match(s)
     if not m:
         raise ValueError("month must look like YYYY-MM (e.g., 2025-12)")
@@ -72,10 +75,7 @@ def resolve_time_window(
     week: str | None = None,
     month: str | None = None,
 ) -> tuple[datetime | None, datetime | None]:
-    """
-    Resolve a time window [since, until) in UTC.
-    Priority: date/hour/week/month > since/until > none.
-    """
+    """Resolve a UTC time window using selectors over explicit bounds."""
     if date_:
         return range_for_date(date_)
     if hour:

@@ -1,4 +1,3 @@
-LICENSE
 README.md
 pyproject.toml
 src/mcp_log_triage_server/__init__.py

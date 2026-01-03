@@ -27,10 +27,7 @@ LOGGER = logging.getLogger(__name__)
 
 
 def _configure_logging() -> None:
-    """Configure a reasonable default logging setup.
-
-    The MCP client typically captures stderr; keeping logs concise makes them easier to consume.
-    """
+    """Configure the default logging setup."""
     level_name = os.getenv("LOG_TRIAGE_LOG_LEVEL", "INFO").upper()
     level = getattr(logging, level_name, logging.INFO)
     logging.basicConfig(
@@ -65,35 +62,34 @@ def triage_logs(
 
     Parameters
     ----------
-    log_path:
+    log_path : str
         Path to a local log file. Supports plain text and .gz.
-    since/until:
+    since, until : str | None
         ISO-8601 datetimes (e.g., 2025-12-31T20:00:00Z). If timezone is omitted, UTC is assumed.
-    date/hour/week/month:
+    date, hour, week, month : str | None
         Convenience selectors that set a time window without exact timestamps.
-        Only one selector should be used at a time (or since/until).
-        Examples:
-          - date: 2025-12-31
-          - hour: 2025-12-31T20
-          - week: 2025-W52
-          - month: 2025-12
-    levels:
+    levels : Sequence[str] | None
         Filter by severity names (e.g., ["error", "warning"]). Case-insensitive.
-    include_all_levels:
+    include_all_levels : bool
         When true, ignore levels and include all severities.
-    include_ai_review:
+    include_ai_review : bool
         When true, split logs into identified entries and AI findings.
-    contains:
+    contains : str | None
         Substring filter applied to the raw line.
-    limit:
-        Maximum number of entries returned (hard-capped in the implementation).
-    include_raw:
+    limit : int | None
+        Ignored; all matching entries are returned.
+    include_raw : bool
         Whether to include the original raw log line in each entry.
 
     Returns
     -------
-    dict:
-        {"count": int, "entries": list[dict]}
+    dict[str, Any]
+        Payload with `count`, `entries`, and optional `ai_findings`.
+
+    Notes
+    -----
+    - Time window precedence: date/hour/week/month > since/until > last 24 hours
+    - include_ai_review cannot be combined with include_all_levels
     """
     return triage_logs_impl(
         log_path=log_path,

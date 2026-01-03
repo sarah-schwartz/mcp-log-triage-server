@@ -48,8 +48,6 @@ class AIReviewResponse(BaseModel):
 @dataclass(frozen=True, slots=True)
 class AIReviewConfig:
     model: str = "gemini-2.5-flash-lite"
-    max_segments: int = 25
-    max_lines_total: int = 800
     segment_max_lines: int = 40
 
     # Local-identified (not sent to AI)
@@ -59,7 +57,7 @@ class AIReviewConfig:
         LogLevel.CRITICAL,
     )
 
-    # NEW: levels that DO get sent to AI (the “rest”)
+    # Levels that are sent to the AI review stage.
     ai_levels: tuple[LogLevel, ...] = (
         LogLevel.INFO,
         LogLevel.DEBUG,
@@ -80,6 +78,7 @@ class AITriageResult:
 
 
 def _redact(text: str) -> str:
+    """Redact sensitive tokens from log text."""
     text = _JWT_RE.sub("<REDACTED_JWT>", text)
     text = _EMAIL_RE.sub("<REDACTED_EMAIL>", text)
     text = _IPV4_RE.sub("<REDACTED_IP>", text)
@@ -88,6 +87,7 @@ def _redact(text: str) -> str:
 
 
 def _fmt_line(e: LogEntry) -> str:
+    """Format a log entry for the AI review prompt."""
     ts = e.timestamp.isoformat() if e.timestamp else "-"
     return f"{e.line_no} {ts} [{e.level.value}] {e.message}"
 
@@ -97,47 +97,35 @@ def _split_entries_for_ai(
     *,
     exclude_line_nos: set[int],
     identified_levels: set[LogLevel],
-    identified_limit: int | None = None,
-    max_segments: int,
-    max_lines_total: int,
     segment_max_lines: int,
 ) -> tuple[list[LogEntry], list[list[LogEntry]]]:
-    """Split entries into identified vs AI segments in a single pass.
-
-    - exclude_line_nos applies to BOTH outputs
-    - Breaks early when AI budgets are reached (performance)
-    """
+    """Split entries into identified entries and AI review segments."""
     identified: list[LogEntry] = []
     segments: list[list[LogEntry]] = []
     current: list[LogEntry] = []
-    total_ai_lines = 0
 
     for e in entries:
         if e.line_no in exclude_line_nos:
             continue
 
         if e.level in identified_levels:
-            if identified_limit is None or len(identified) < identified_limit:
-                identified.append(e)
+            identified.append(e)
             continue
 
-        if len(segments) >= max_segments or total_ai_lines >= max_lines_total:
-            break
-
         current.append(e)
-        total_ai_lines += 1
 
         if len(current) >= segment_max_lines:
             segments.append(current)
             current = []
 
-    if current and len(segments) < max_segments and total_ai_lines <= max_lines_total:
+    if current:
         segments.append(current)
 
     return identified, segments
 
 
 def _call_gemini_json(prompt: str, *, cfg: AIReviewConfig) -> AIReviewResponse:
+    """Call Gemini and validate the response against the schema."""
     api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
     if not api_key:
         raise RuntimeError("Missing GEMINI_API_KEY (or GOOGLE_API_KEY).")
@@ -180,6 +168,7 @@ def _call_gemini_json(prompt: str, *, cfg: AIReviewConfig) -> AIReviewResponse:
 
 
 def _review_segments(segments: list[list[LogEntry]], *, cfg: AIReviewConfig) -> AIReviewResponse:
+    """Review segments with the AI model and filter findings."""
     if not segments:
         return AIReviewResponse(findings=[])
 
@@ -231,7 +220,7 @@ def review_non_error_logs(
     if cfg is None:
         cfg = AIReviewConfig()
 
-    # NEW: iterate only the levels we care about
+    # Limit iteration to identified and AI-review levels.
     wanted_levels = set(cfg.identified_levels) | set(cfg.ai_levels)
 
     it = iter_entries(
@@ -250,9 +239,6 @@ def review_non_error_logs(
         it,
         exclude_line_nos=exclude_line_nos,
         identified_levels=set(cfg.identified_levels),
-        identified_limit=None,
-        max_segments=cfg.max_segments,
-        max_lines_total=cfg.max_lines_total,
         segment_max_lines=cfg.segment_max_lines,
     )
 
@@ -276,6 +262,7 @@ def triage_with_ai_review(
     """Split logs into identified entries and AI findings."""
     if cfg is None:
         cfg = AIReviewConfig()
+    _ = identified_limit
 
     identified_set = (
         set(identified_levels)
@@ -284,7 +271,7 @@ def triage_with_ai_review(
     )
     ai_set = set(cfg.ai_levels)
 
-    # NEW: iterate only levels we care about
+    # Limit iteration to identified and AI-review levels.
     wanted_levels = identified_set | ai_set
 
     it = iter_entries(
@@ -304,9 +291,6 @@ def triage_with_ai_review(
         it,
         exclude_line_nos=exclude_line_nos,
         identified_levels=identified_set,
-        identified_limit=identified_limit,
-        max_segments=cfg.max_segments,
-        max_lines_total=cfg.max_lines_total,
         segment_max_lines=cfg.segment_max_lines,
     )
 

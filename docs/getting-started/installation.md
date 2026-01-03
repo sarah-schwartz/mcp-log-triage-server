@@ -3,32 +3,46 @@ title: Installation
 description: Install the server and optional development tools.
 ---
 
-## Local Development Install
+## Prerequisites
+
+- Python 3.11+
+- `pip` available on your PATH
+- Read access to the log files you want to triage
+
+## Local Install
 
 ```bash
-python -m venv .venv
+uv venv
 source .venv/bin/activate  # Windows: .venv\Scripts\activate
-pip install -e .
+uv pip install -e .
 ```
 
-## Development Extras
+## Optional Extras
 
-Install test and lint tooling:
+Install development tools:
 
 ```bash
-pip install -e ".[dev]"
+uv pip install -e ".[dev]"
 ```
 
-## Optional AI Review
-
-The AI review pipeline uses Gemini and is optional. Install the extra and set
-the API key:
+Install the AI review dependency (Gemini client):
 
 ```bash
-pip install -e ".[ai]"
+uv pip install -e ".[ai]"
 ```
 
-Then set one of:
+Then set one of the required API keys:
 
 - `GEMINI_API_KEY`
 - `GOOGLE_API_KEY`
+
+## Verify the Install
+
+Run the server over stdio:
+
+```bash
+python -m mcp_log_triage_server
+```
+
+If the command exits immediately, check for missing dependencies or an
+incorrect Python version.

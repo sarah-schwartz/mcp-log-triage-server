@@ -35,8 +35,6 @@ def test_split_entries_for_ai_separates_identified() -> None:
         entries,
         exclude_line_nos=set(),
         identified_levels={LogLevel.WARNING, LogLevel.ERROR},
-        max_segments=10,
-        max_lines_total=10,
         segment_max_lines=10,
     )
 
@@ -60,8 +58,6 @@ def test_split_entries_for_ai_excludes_line_numbers() -> None:
         entries,
         exclude_line_nos={1},
         identified_levels={LogLevel.WARNING},
-        max_segments=10,
-        max_lines_total=10,
         segment_max_lines=10,
     )
 

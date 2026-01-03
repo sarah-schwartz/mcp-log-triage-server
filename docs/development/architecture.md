@@ -19,6 +19,19 @@ description: Module layout and data flow.
 4. Files are scanned and parsed in `core/log_service.py`
 5. Parsed `LogEntry` objects are returned to the tool and serialized
 
+## Parsing Pipeline Details
+
+- `core/scanning.py` samples the log to detect format and prefilter candidates
+- `core/formats.py` contains a chain of parsers that normalize entries
+- `core/log_service.py` applies time windows, severity filters, and substring
+  filters before yielding entries
+
+## Extension Points
+
+- Add new parsers by implementing `LogParser` and inserting into the chain
+- Add new resources or prompts in their respective registries
+- Extend AI review by updating `core/ai_review.py` or adding new providers
+
 ## Why This Split
 
 - Testability: pure logic is isolated in `core/`
