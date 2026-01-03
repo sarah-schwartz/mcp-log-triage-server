@@ -10,6 +10,7 @@ from datetime import UTC, date, datetime, timedelta
 
 _WEEK_RE = re.compile(r"^(?P<y>\d{4})-W(?P<w>\d{2})$")
 _MONTH_RE = re.compile(r"^(?P<y>\d{4})-(?P<m>\d{2})$")
+_YEAR_RE = re.compile(r"^(?P<y>\d{4})$")
 
 
 def parse_iso_dt(s: str) -> datetime:
@@ -66,6 +67,17 @@ def range_for_month(s: str) -> tuple[datetime, datetime]:
     return start, end
 
 
+def range_for_year(s: str) -> tuple[datetime, datetime]:
+    """Return the UTC year window for a YYYY selector."""
+    m = _YEAR_RE.match(s)
+    if not m:
+        raise ValueError("year must look like YYYY (e.g., 2025)")
+    y = int(m.group("y"))
+    start = datetime(y, 1, 1, tzinfo=UTC)
+    end = datetime(y + 1, 1, 1, tzinfo=UTC)
+    return start, end
+
+
 def resolve_time_window(
     *,
     since: str | None = None,
@@ -74,8 +86,12 @@ def resolve_time_window(
     hour: str | None = None,
     week: str | None = None,
     month: str | None = None,
+    year: str | None = None,
+    days_lookback: int | None = None,
+    hours_lookback: int | None = None,
+    now: datetime | None = None,
 ) -> tuple[datetime | None, datetime | None]:
-    """Resolve a UTC time window using selectors over explicit bounds."""
+    """Resolve a UTC time window using selectors, lookback, or explicit bounds."""
     if date_:
         return range_for_date(date_)
     if hour:
@@ -84,6 +100,21 @@ def resolve_time_window(
         return range_for_week(week)
     if month:
         return range_for_month(month)
+    if year:
+        return range_for_year(year)
+
+    if days_lookback is not None or hours_lookback is not None:
+        if days_lookback is not None and hours_lookback is not None:
+            raise ValueError("Use either days_lookback or hours_lookback, not both.")
+        if days_lookback is not None and days_lookback < 0:
+            raise ValueError("days_lookback must be >= 0")
+        if hours_lookback is not None and hours_lookback < 0:
+            raise ValueError("hours_lookback must be >= 0")
+
+        end = now or datetime.now(UTC)
+        if days_lookback is not None:
+            return end - timedelta(days=days_lookback), end
+        return end - timedelta(hours=hours_lookback or 0), end
 
     s = parse_iso_dt(since) if since else None
     u = parse_iso_dt(until) if until else None
