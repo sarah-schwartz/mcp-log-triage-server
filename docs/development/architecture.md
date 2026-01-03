@@ -22,7 +22,7 @@ description: Module layout and data flow.
 ## Parsing Pipeline Details
 
 - `core/scanning.py` samples the log to detect format and prefilter candidates
-- `core/formats.py` contains a chain of parsers that normalize entries
+- `core/formats/` contains the parser implementations that normalize entries
 - `core/log_service.py` applies time windows, severity filters, and substring
   filters before yielding entries
 
