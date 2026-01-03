@@ -18,7 +18,9 @@ from .models import LogEntry, LogLevel
 class LogParser(Protocol):
     """Parser interface: return LogEntry if line matches, else None."""
 
-    def parse(self, line_no: int, line: str) -> LogEntry | None: ...
+    def parse(self, line_no: int, line: str) -> LogEntry | None:
+        """Parse a log line into a LogEntry if recognized."""
+        ...
 
 
 @dataclass(frozen=True)
@@ -87,6 +89,7 @@ class CompositeParser:
     parsers: Sequence[LogParser]
 
     def parse(self, line_no: int, line: str) -> LogEntry | None:
+        """Return the first successful parse from the configured parsers."""
         for p in self.parsers:
             out = p.parse(line_no, line)
             if out is not None:
@@ -104,6 +107,7 @@ class BracketTimestampParser:
     _re = re.compile(r"^(?P<ts>.+?)\s+\[(?P<level>[A-Za-z]+)\]\s+(?P<msg>.*)$")
 
     def _parse_ts(self, ts_str: str) -> datetime | None:
+        """Parse a timestamp string using the configured formats."""
         for fmt in self.timestamp_formats:
             try:
                 return datetime.strptime(ts_str, fmt).replace(tzinfo=UTC)
@@ -112,6 +116,7 @@ class BracketTimestampParser:
         return None
 
     def parse(self, line_no: int, line: str) -> LogEntry | None:
+        """Parse a bracketed timestamp line into a LogEntry."""
         m = self._re.match(line)
         if not m:
             return None
@@ -138,6 +143,7 @@ class JsonLinesParser:
     msg_keys: Sequence[str] = ("message", "msg", "error", "detail")
 
     def parse(self, line_no: int, line: str) -> LogEntry | None:
+        """Parse a JSON object line into a LogEntry."""
         s = line.strip()
         if not s or not (s.startswith("{") and s.endswith("}")):
             return None
@@ -147,7 +153,6 @@ class JsonLinesParser:
         except json.JSONDecodeError:
             return None
 
-        # timestamp (optional)
         ts: datetime | None = None
         ts_val = None
         for k in self.time_keys:
@@ -162,7 +167,6 @@ class JsonLinesParser:
             except ValueError:
                 ts = None
 
-        # level
         level = LogLevel.UNKNOWN
         lvl_val = None
         for k in self.level_keys:
@@ -175,7 +179,6 @@ class JsonLinesParser:
             except ValueError:
                 level = LogLevel.UNKNOWN
 
-        # message
         msg_val = None
         for k in self.msg_keys:
             if k in obj:
@@ -195,6 +198,7 @@ class LooseLevelParser:
     keywords: dict[LogLevel, Iterable[str]] | None = None
 
     def parse(self, line_no: int, line: str) -> LogEntry | None:
+        """Parse a line by scanning for severity keywords."""
         kw = self.keywords or {
             LogLevel.CRITICAL: ("CRITICAL", "FATAL", "PANIC"),
             LogLevel.ERROR: ("ERROR", "EXCEPTION", "TRACEBACK", "FAILED"),
@@ -240,6 +244,7 @@ class SyslogParser:
 
     @staticmethod
     def level_from_pri(pri: int) -> LogLevel:
+        """Map syslog PRI to a normalized severity."""
         sev = pri % 8  # 0..7
         if sev <= 2:
             return LogLevel.CRITICAL
@@ -255,6 +260,7 @@ class SyslogParser:
 
     @staticmethod
     def _parse_rfc5424_ts(ts_str: str) -> datetime | None:
+        """Parse RFC5424 timestamps into UTC datetimes."""
         try:
             ts = datetime.fromisoformat(ts_str.replace("Z", "+00:00"))
             if ts.tzinfo is not None:
@@ -265,6 +271,7 @@ class SyslogParser:
 
     @staticmethod
     def _parse_rfc3164_ts(ts_str: str) -> datetime | None:
+        """Parse RFC3164 timestamps into UTC datetimes."""
         try:
             naive = datetime.strptime(ts_str, "%b %d %H:%M:%S")
         except ValueError:
@@ -278,6 +285,7 @@ class SyslogParser:
 
     @staticmethod
     def _syslog_meta(*, pri: int, host: str, app: str) -> dict:
+        """Build structured syslog metadata."""
         sev = pri % 8
         fac = pri // 8
         return {
@@ -291,6 +299,7 @@ class SyslogParser:
         }
 
     def parse(self, line_no: int, line: str) -> LogEntry | None:
+        """Parse a syslog line into a LogEntry."""
         m = self._rfc5424.match(line)
         if m:
             pri = int(m.group("pri"))
@@ -349,6 +358,7 @@ class AccessLogParser:
 
     @staticmethod
     def level_from_status(status: int) -> LogLevel:
+        """Map HTTP status codes to normalized severity."""
         if 500 <= status <= 599:
             return LogLevel.ERROR
         if 400 <= status <= 499:
@@ -357,12 +367,14 @@ class AccessLogParser:
 
     @staticmethod
     def _parse_ts(ts_str: str) -> datetime | None:
+        """Parse access-log timestamps into UTC."""
         try:
             return datetime.strptime(ts_str, "%d/%b/%Y:%H:%M:%S %z").astimezone(UTC)
         except ValueError:
             return None
 
     def parse(self, line_no: int, line: str) -> LogEntry | None:
+        """Parse an access-log line into a LogEntry."""
         m = self._re.match(line)
         if not m:
             return None
