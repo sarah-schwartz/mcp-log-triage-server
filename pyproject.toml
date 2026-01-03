@@ -5,7 +5,6 @@ description = "MCP server for triaging local log files."
 readme = "README.md"
 requires-python = ">=3.11"
 authors = [{ name = "Your Name" }]
-license = { text = "MIT" }
 dependencies = [
   "mcp>=0.1.0",
   "pydantic>=2.7.0",
@@ -25,8 +24,8 @@ dev = [
 log-triage-mcp = "mcp_log_triage_server.server.log_server:main"
 
 [tool.pytest.ini_options]
+pythonpath = ["src"]
 testpaths = ["tests"]
-addopts = "-q"
 
 [tool.ruff]
 line-length = 100
