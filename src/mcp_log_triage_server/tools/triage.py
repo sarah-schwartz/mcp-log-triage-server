@@ -72,18 +72,38 @@ def triage_logs_impl(
     include_all_levels: bool = False,
     include_ai_review: bool = False,
 ) -> dict[str, Any]:
-    """Implementation for the `triage_logs` MCP tool.
+    """Return structured log entries and optional AI findings.
+
+    Parameters
+    ----------
+    log_path : str
+        Path to a local log file. Plain text and .gz files are supported.
+    since, until : str | None
+        ISO-8601 datetimes. If timezone is omitted, UTC is assumed.
+    date, hour, week, month : str | None
+        Convenience selectors for common time windows.
+    levels : list[str] | None
+        Severity filter, case-insensitive. Defaults are applied when omitted.
+    contains : str | None
+        Substring filter applied to the raw line.
+    limit : int | None
+        Accepted for compatibility but ignored.
+    include_raw : bool
+        Whether to include the original raw line in each entry.
+    include_all_levels : bool
+        When true, ignore levels and include all severities.
+    include_ai_review : bool
+        When true, split logs into identified entries and AI findings.
+
+    Returns
+    -------
+    dict[str, Any]
+        Payload with `count`, `entries`, and optional `ai_findings`.
 
     Notes
     -----
-    - Time window selection precedence:
-        1) explicit since/until
-        2) date/hour/week/month selectors
-        3) fallback to last 24 hours
-    - include_all_levels overrides levels/DEFAULT_LEVELS
-    - include_ai_review splits logs into identified vs AI review lines
+    - Time window precedence: date/hour/week/month > since/until > last 24 hours
     - include_ai_review cannot be combined with include_all_levels
-    - limit is accepted for compatibility but ignored (all entries are returned)
     """
     if include_all_levels and include_ai_review:
         raise ValueError("include_all_levels cannot be used with include_ai_review.")
