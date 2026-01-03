@@ -24,9 +24,7 @@ logger = logging.getLogger(__name__)
 
 _EMAIL_RE = re.compile(r"(?i)\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b")
 _IPV4_RE = re.compile(r"\b(?:\d{1,3}\.){3}\d{1,3}\b")
-_JWT_RE = re.compile(
-    r"\beyJ[a-zA-Z0-9_-]{10,}\.[a-zA-Z0-9_-]{10,}\.[a-zA-Z0-9_-]{10,}\b"
-)
+_JWT_RE = re.compile(r"\beyJ[a-zA-Z0-9_-]{10,}\.[a-zA-Z0-9_-]{10,}\.[a-zA-Z0-9_-]{10,}\b")
 _LONG_TOKEN_RE = re.compile(r"\b[a-zA-Z0-9_\-]{32,}\b")
 
 
@@ -73,6 +71,7 @@ class AIReviewConfig:
 @dataclass(frozen=True, slots=True)
 class AITriageResult:
     """Split output for local triage + AI findings."""
+
     identified_entries: list[LogEntry]
     ai_review: AIReviewResponse
 
@@ -157,9 +156,7 @@ def _call_gemini_json(prompt: str, *, cfg: AIReviewConfig) -> AIReviewResponse:
             if attempt >= cfg.max_retries:
                 break
             sleep_s = min(8, 2 ** (attempt - 1))
-            logger.warning(
-                "Gemini call failed (attempt %s/%s): %s", attempt, cfg.max_retries, e
-            )
+            logger.warning("Gemini call failed (attempt %s/%s): %s", attempt, cfg.max_retries, e)
             time.sleep(sleep_s)
 
     raise RuntimeError(
@@ -187,7 +184,8 @@ def _review_segments(segments: list[list[LogEntry]], *, cfg: AIReviewConfig) -> 
 
         prompt = (
             "You are a log triage assistant.\n"
-            "You will be given application log lines that are NOT classified as WARNING/ERROR/CRITICAL.\n"
+            "You will be given application log lines that are NOT classified as "
+            "WARNING/ERROR/CRITICAL.\n"
             "Identify whether these lines likely indicate a hidden error or incident signal.\n"
             "Return ONLY valid JSON that matches the provided schema.\n"
             "Rules:\n"
@@ -265,9 +263,7 @@ def triage_with_ai_review(
     _ = identified_limit
 
     identified_set = (
-        set(identified_levels)
-        if identified_levels is not None
-        else set(cfg.identified_levels)
+        set(identified_levels) if identified_levels is not None else set(cfg.identified_levels)
     )
     ai_set = set(cfg.ai_levels)
 

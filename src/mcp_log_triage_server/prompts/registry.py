@@ -12,13 +12,17 @@ from mcp.server.fastmcp import FastMCP
 
 def register_prompts(mcp: FastMCP) -> None:
     """Register prompt templates on the MCP server."""
+
     @mcp.prompt()
     def summarize_resource(uri: str) -> list[dict[str, Any]]:
         """Build a prompt that summarizes a resource URI."""
         return [
             {
                 "role": "system",
-                "content": "You are a precise assistant. Summarize the provided resource clearly and concisely.",
+                "content": (
+                    "You are a precise assistant. Summarize the provided resource clearly and "
+                    "concisely."
+                ),
             },
             {
                 "role": "user",

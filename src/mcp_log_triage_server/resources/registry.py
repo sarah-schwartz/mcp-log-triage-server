@@ -46,6 +46,7 @@ def _open_text(path: Path) -> str:
 
 def register_resources(mcp: FastMCP) -> None:
     """Register resource handlers on the MCP server."""
+
     @mcp.resource("app://log-triage/help")
     def help_resource() -> str:
         """Return a short list of available resource URIs."""

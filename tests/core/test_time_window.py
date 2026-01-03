@@ -8,8 +8,8 @@ from mcp_log_triage_server.core.time_window import (
     parse_iso_dt,
     range_for_hour,
     range_for_month,
-    range_for_year,
     range_for_week,
+    range_for_year,
     resolve_time_window,
 )
 

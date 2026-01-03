@@ -1,2 +1,0 @@
-[console_scripts]
-log-triage-mcp = mcp_log_triage_server.server.log_server:main

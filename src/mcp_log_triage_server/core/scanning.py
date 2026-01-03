@@ -35,12 +35,8 @@ _SEVERITY_PRIORITY: tuple[LogLevel, ...] = (
 
 # Fast recognizers (bytes)
 _SYSLOG_PRI_RE = re.compile(rb"^<(?P<pri>\d{1,3})>")
-_ACCESS_RE = re.compile(
-    rb'^\S+\s+\S+\s+\S+\s+\[[^\]]+\]\s+"[^"]+"\s+(?P<status>\d{3})\s+'
-)
-_BRACKET_HINT_RE = re.compile(
-    rb"\[\s*(ERROR|WARN(?:ING)?|INFO|DEBUG|CRITICAL)\s*\]", re.IGNORECASE
-)
+_ACCESS_RE = re.compile(rb'^\S+\s+\S+\s+\S+\s+\[[^\]]+\]\s+"[^"]+"\s+(?P<status>\d{3})\s+')
+_BRACKET_HINT_RE = re.compile(rb"\[\s*(ERROR|WARN(?:ING)?|INFO|DEBUG|CRITICAL)\s*\]", re.IGNORECASE)
 
 
 def sniff_format(
