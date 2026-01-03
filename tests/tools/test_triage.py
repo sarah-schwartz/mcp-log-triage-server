@@ -43,6 +43,30 @@ def test_triage_logs_impl_filters_levels_and_contains(tmp_path: Path) -> None:
     assert "raw" not in entry
 
 
+def test_triage_logs_impl_year_selector(tmp_path: Path) -> None:
+    log = tmp_path / "app.log"
+    log.write_text(
+        "\n".join(
+            [
+                "2024-12-31T23:59:59Z [ERROR] last year",
+                "2025-01-01T00:00:00Z [ERROR] new year",
+                "2025-12-31T23:59:59Z [ERROR] end year",
+                "2026-01-01T00:00:00Z [ERROR] next year",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    out = triage_logs_impl(
+        log_path=str(log),
+        year="2025",
+        include_all_levels=True,
+    )
+
+    assert out["count"] == 2
+
+
 def test_triage_logs_impl_include_all_levels_overrides_levels(tmp_path: Path) -> None:
     log = tmp_path / "app.log"
     _write_log(log)
