@@ -51,6 +51,9 @@ def triage_logs(
     hour: str | None = None,
     week: str | None = None,
     month: str | None = None,
+    year: str | None = None,
+    days_lookback: int | None = None,
+    hours_lookback: int | None = None,
     levels: Sequence[str] | None = None,
     include_all_levels: bool = False,
     include_ai_review: bool = False,
@@ -66,8 +69,10 @@ def triage_logs(
         Path to a local log file. Supports plain text and .gz.
     since, until : str | None
         ISO-8601 datetimes (e.g., 2025-12-31T20:00:00Z). If timezone is omitted, UTC is assumed.
-    date, hour, week, month : str | None
+    date, hour, week, month, year : str | None
         Convenience selectors that set a time window without exact timestamps.
+    days_lookback, hours_lookback : int | None
+        Relative lookback window size. Use one or the other.
     levels : Sequence[str] | None
         Filter by severity names (e.g., ["error", "warning"]). Case-insensitive.
     include_all_levels : bool
@@ -88,7 +93,7 @@ def triage_logs(
 
     Notes
     -----
-    - Time window precedence: date/hour/week/month > since/until > last 24 hours
+    - Time window precedence: selectors > lookback > since/until > last 24 hours
     - include_ai_review cannot be combined with include_all_levels
     """
     return triage_logs_impl(
@@ -99,6 +104,9 @@ def triage_logs(
         hour=hour,
         week=week,
         month=month,
+        year=year,
+        days_lookback=days_lookback,
+        hours_lookback=hours_lookback,
         levels=levels,
         include_all_levels=include_all_levels,
         include_ai_review=include_ai_review,
