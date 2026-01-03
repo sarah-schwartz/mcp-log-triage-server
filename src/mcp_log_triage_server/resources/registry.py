@@ -19,11 +19,13 @@ ALLOWED_FILE_SUFFIXES = {".log", ".txt", ".md"}
 
 
 def _base_dir() -> Path:
+    """Return the resolved base directory for file resources."""
     raw = os.getenv("LOG_TRIAGE_BASE_DIR", os.getcwd())
     return Path(raw).resolve()
 
 
 def _safe_resolve(path: str) -> Path:
+    """Resolve a path under the configured base directory."""
     base = _base_dir()
     p = Path(path).expanduser()
     if not p.is_absolute():
@@ -43,8 +45,10 @@ def _open_text(path: Path) -> str:
 
 
 def register_resources(mcp: FastMCP) -> None:
+    """Register resource handlers on the MCP server."""
     @mcp.resource("app://log-triage/help")
     def help_resource() -> str:
+        """Return a short list of available resource URIs."""
         return (
             "Resources:\n"
             "- app://log-triage/help\n"
@@ -57,7 +61,7 @@ def register_resources(mcp: FastMCP) -> None:
 
     @mcp.resource("app://log-triage/examples/sample-log")
     def sample_log() -> str:
-        """A tiny sample log for demos and tests."""
+        """Return a tiny sample log for demos and tests."""
         return (
             "2025-12-30T08:12:01Z [INFO] service started\n"
             "2025-12-30T08:12:03Z [WARNING] retrying request id=abc123\n"
@@ -67,6 +71,7 @@ def register_resources(mcp: FastMCP) -> None:
 
     @mcp.resource("app://log-triage/config/scan-tokens")
     def scan_tokens() -> dict[str, list[str]]:
+        """Return the configured scan tokens as strings."""
         cfg = default_scan_config()
         out: dict[str, list[str]] = {}
         for level, toks in cfg.tokens.items():
@@ -75,17 +80,15 @@ def register_resources(mcp: FastMCP) -> None:
 
     @mcp.resource("app://log-triage/schemas/ai-review-response")
     def ai_review_schema() -> dict[str, Any]:
+        """Return the JSON schema for AI review responses."""
         return AIReviewResponse.model_json_schema()
 
     @mcp.resource("file://{path}")
     def read_file(path: str) -> str:
-        """Read a text file from within LOG_TRIAGE_BASE_DIR.
-
-        Hardening:
-        - Only allows .log/.txt/.md (and gzip variants: *.log.gz, *.txt.gz, *.md.gz)
-        """
+        """Read a text file from within LOG_TRIAGE_BASE_DIR."""
         p = _safe_resolve(path)
 
+        # Enforce allowlisted suffixes, including .gz double suffixes.
         suffix = p.suffix.lower()
         if suffix == ".gz":
             second = p.with_suffix("").suffix.lower()
