@@ -129,9 +129,7 @@ class BracketTimestampParser:
             level = self.default_level
 
         msg = m.group("msg").strip()
-        return LogEntry(
-            line_no=line_no, timestamp=ts, level=level, message=msg, raw=line
-        )
+        return LogEntry(line_no=line_no, timestamp=ts, level=level, message=msg, raw=line)
 
 
 @dataclass(frozen=True, slots=True)
@@ -186,9 +184,7 @@ class JsonLinesParser:
                 break
         msg = str(msg_val) if msg_val is not None else s
 
-        return LogEntry(
-            line_no=line_no, timestamp=ts, level=level, message=msg, raw=line
-        )
+        return LogEntry(line_no=line_no, timestamp=ts, level=level, message=msg, raw=line)
 
 
 @dataclass(frozen=True, slots=True)
@@ -398,6 +394,4 @@ class AccessLogParser:
         if size is not None:
             msg += f" ({size} bytes)"
 
-        return LogEntry(
-            line_no=line_no, timestamp=ts, level=level, message=msg, raw=line
-        )
+        return LogEntry(line_no=line_no, timestamp=ts, level=level, message=msg, raw=line)
