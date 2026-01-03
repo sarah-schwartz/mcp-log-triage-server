@@ -9,24 +9,9 @@ from mcp_log_triage_server.core.ai_review import service as ai_service
 from mcp_log_triage_server.tools.triage import triage_logs_impl
 
 
-def _write_log(path: Path) -> None:
-    path.write_text(
-        "\n".join(
-            [
-                "2025-12-30T08:12:01Z [INFO] service started",
-                "2025-12-30T08:12:03Z [WARNING] retrying request id=abc123",
-                "2025-12-30T08:12:04Z [ERROR] upstream timeout route=/api/v1/items",
-                "2025-12-30T08:12:05Z [CRITICAL] database unavailable",
-            ]
-        )
-        + "\n",
-        encoding="utf-8",
-    )
-
-
-def test_triage_logs_impl_filters_levels_and_contains(tmp_path: Path) -> None:
+def test_triage_logs_impl_filters_levels_and_contains(tmp_path: Path, write_log) -> None:
     log = tmp_path / "app.log"
-    _write_log(log)
+    write_log(log)
 
     out = triage_logs_impl(
         log_path=str(log),
@@ -67,9 +52,9 @@ def test_triage_logs_impl_year_selector(tmp_path: Path) -> None:
     assert out["count"] == 2
 
 
-def test_triage_logs_impl_include_all_levels_overrides_levels(tmp_path: Path) -> None:
+def test_triage_logs_impl_include_all_levels_overrides_levels(tmp_path: Path, write_log) -> None:
     log = tmp_path / "app.log"
-    _write_log(log)
+    write_log(log)
 
     out = triage_logs_impl(
         log_path=str(log),
@@ -81,9 +66,9 @@ def test_triage_logs_impl_include_all_levels_overrides_levels(tmp_path: Path) ->
     assert out["count"] == 4
 
 
-def test_triage_logs_impl_invalid_level(tmp_path: Path) -> None:
+def test_triage_logs_impl_invalid_level(tmp_path: Path, write_log) -> None:
     log = tmp_path / "app.log"
-    _write_log(log)
+    write_log(log)
 
     with pytest.raises(ValueError):
         triage_logs_impl(
@@ -93,9 +78,9 @@ def test_triage_logs_impl_invalid_level(tmp_path: Path) -> None:
         )
 
 
-def test_triage_logs_impl_include_raw(tmp_path: Path) -> None:
+def test_triage_logs_impl_include_raw(tmp_path: Path, write_log) -> None:
     log = tmp_path / "app.log"
-    _write_log(log)
+    write_log(log)
 
     out = triage_logs_impl(
         log_path=str(log),
@@ -108,9 +93,9 @@ def test_triage_logs_impl_include_raw(tmp_path: Path) -> None:
     assert "raw" in out["entries"][0]
 
 
-def test_triage_logs_impl_include_ai_review(tmp_path: Path, monkeypatch) -> None:
+def test_triage_logs_impl_include_ai_review(tmp_path: Path, monkeypatch, write_log) -> None:
     log = tmp_path / "app.log"
-    _write_log(log)
+    write_log(log)
 
     def fake_call(prompt: str, *, cfg) -> AIReviewResponse:
         return AIReviewResponse(
@@ -139,9 +124,9 @@ def test_triage_logs_impl_include_ai_review(tmp_path: Path, monkeypatch) -> None
     assert out["ai_findings"][0]["title"] == "Test"
 
 
-def test_triage_logs_impl_include_ai_review_conflicts(tmp_path: Path) -> None:
+def test_triage_logs_impl_include_ai_review_conflicts(tmp_path: Path, write_log) -> None:
     log = tmp_path / "app.log"
-    _write_log(log)
+    write_log(log)
 
     with pytest.raises(ValueError):
         triage_logs_impl(
