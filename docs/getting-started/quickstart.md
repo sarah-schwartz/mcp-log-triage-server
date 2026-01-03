@@ -3,7 +3,7 @@ title: Quickstart
 description: Run the server and make your first tool call.
 ---
 
-## Run the Server (stdio)
+## 1) Run the Server (stdio)
 
 ```bash
 python -m mcp_log_triage_server
@@ -15,7 +15,7 @@ Or via the console script:
 log-triage-mcp
 ```
 
-## Call the Tool
+## 2) Call the Tool
 
 The server exposes a single tool named `triage_logs`. Example payload:
 
@@ -23,9 +23,26 @@ The server exposes a single tool named `triage_logs`. Example payload:
 {
   "log_path": "samples/access.log",
   "date": "2025-12-31",
-  "levels": ["error", "critical"]
+  "levels": ["error", "critical"],
+  "include_raw": true
 }
 ```
+
+The response includes a `count` and an `entries` array with structured fields.
+
+## 3) Optional AI Review
+
+If the AI review extra is installed and an API key is set, you can add:
+
+```json
+{
+  "log_path": "samples/bracket.log",
+  "hours_lookback": 6,
+  "include_ai_review": true
+}
+```
+
+The response adds an `ai_findings` array with structured recommendations.
 
 ## Next Steps
 
