@@ -48,7 +48,7 @@ def test_syslog_parser_rfc5424() -> None:
 
 def test_access_log_parser() -> None:
     parser = AccessLogParser()
-    line = "127.0.0.1 - - [10/Oct/2000:13:55:36 -0700] " '"GET / HTTP/1.0" 404 2326'
+    line = '127.0.0.1 - - [10/Oct/2000:13:55:36 -0700] "GET / HTTP/1.0" 404 2326'
     entry = parser.parse(1, line)
     assert entry is not None
     assert entry.line_no == 1
