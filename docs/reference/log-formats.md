@@ -39,7 +39,8 @@ Example:
 ## Bracketed Timestamps
 
 Format: `<timestamp> [LEVEL] <message>`. Supported timestamp formats include
-`%Y-%m-%d %H:%M:%S`, `%Y/%m/%d %H:%M:%S`, and `%d-%m-%Y %H:%M:%S`.
+`%Y-%m-%d %H:%M:%S`, `%Y-%m-%dT%H:%M:%S`, `%Y-%m-%dT%H:%M:%SZ`,
+`%Y/%m/%d %H:%M:%S`, and `%d-%m-%Y %H:%M:%S`.
 
 Example:
 
