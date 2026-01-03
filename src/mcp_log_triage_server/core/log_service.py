@@ -13,10 +13,13 @@ from pathlib import Path
 from .formats import (
     AccessLogParser,
     BracketTimestampParser,
+    CefParser,
     CompositeParser,
     JsonLinesParser,
+    LogfmtParser,
     LogParser,
     LooseLevelParser,
+    LtsvParser,
     ScanConfig,
     SyslogParser,
     default_scan_config,
@@ -48,6 +51,9 @@ def default_parser() -> LogParser:
                 )
             ),
             JsonLinesParser(),
+            CefParser(),
+            LogfmtParser(),
+            LtsvParser(),
             LooseLevelParser(),
         ]
     )
