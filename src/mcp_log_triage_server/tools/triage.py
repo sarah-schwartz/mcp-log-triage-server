@@ -70,7 +70,6 @@ def triage_logs_impl(
     hours_lookback: int | None = None,
     levels: list[str] | None = None,
     contains: str | None = None,
-    limit: int | None = None,
     include_raw: bool = False,
     include_all_levels: bool = False,
     include_ai_review: bool = False,
@@ -91,8 +90,6 @@ def triage_logs_impl(
         Severity filter, case-insensitive. Defaults are applied when omitted.
     contains : str | None
         Substring filter applied to the raw line.
-    limit : int | None
-        Accepted for compatibility but ignored.
     include_raw : bool
         Whether to include the original raw line in each entry.
     include_all_levels : bool

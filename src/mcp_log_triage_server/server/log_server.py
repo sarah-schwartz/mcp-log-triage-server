@@ -58,7 +58,6 @@ def triage_logs(
     include_all_levels: bool = False,
     include_ai_review: bool = False,
     contains: str | None = None,
-    limit: int | None = None,
     include_raw: bool = False,
 ) -> dict[str, Any]:
     """Return structured log entries for a file and time window.
@@ -81,8 +80,6 @@ def triage_logs(
         When true, split logs into identified entries and AI findings.
     contains : str | None
         Substring filter applied to the raw line.
-    limit : int | None
-        Ignored; all matching entries are returned.
     include_raw : bool
         Whether to include the original raw log line in each entry.
 
@@ -111,7 +108,6 @@ def triage_logs(
         include_all_levels=include_all_levels,
         include_ai_review=include_ai_review,
         contains=contains,
-        limit=limit,
         include_raw=include_raw,
     )
 

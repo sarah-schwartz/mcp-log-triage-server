@@ -150,16 +150,3 @@ def test_triage_logs_impl_include_ai_review_conflicts(tmp_path: Path) -> None:
             include_ai_review=True,
             include_all_levels=True,
         )
-
-
-def test_triage_logs_impl_ignores_limit(tmp_path: Path) -> None:
-    log = tmp_path / "app.log"
-    _write_log(log)
-
-    out = triage_logs_impl(
-        log_path=str(log),
-        date="2025-12-30",
-        limit=1,
-    )
-
-    assert out["count"] == 2

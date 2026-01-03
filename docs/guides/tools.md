@@ -58,9 +58,6 @@ When true, split logs into identified entries and AI findings.
 `contains` (str, optional)
 Substring filter applied to the raw line.
 
-`limit` (int, optional)
-Accepted for compatibility but ignored.
-
 `include_raw` (bool, optional)
 Whether to include the original raw log line in each entry.
 
