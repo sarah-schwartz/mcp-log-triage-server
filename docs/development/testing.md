@@ -22,3 +22,10 @@ Tests mirror the `src/` structure. For example:
 - Use `tmp_path` to create log files in isolation.
 - Avoid network calls and external services in unit tests.
 - Prefer deterministic timestamps and explicit windows in time-based tests.
+
+## Coverage Focus
+
+- Time window parsing and validation
+- Format detection and parser correctness
+- Prefilter behavior on large logs
+- Tool input validation and response shape
