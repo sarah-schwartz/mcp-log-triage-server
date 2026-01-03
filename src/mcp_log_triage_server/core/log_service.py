@@ -213,10 +213,7 @@ def iter_entries(
 
 def get_logs(
     log_path: str | Path,
-    *,
-    limit: int | None = None,
     **iter_kwargs,
 ) -> list[LogEntry]:
-    """Collect iter_entries into a list (limit is ignored)."""
-    _ = limit
+    """Collect iter_entries into a list."""
     return list(iter_entries(log_path, **iter_kwargs))

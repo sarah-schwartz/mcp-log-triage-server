@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from mcp_log_triage_server.core.log_service import get_logs, iter_entries
+from mcp_log_triage_server.core.log_service import iter_entries
 from mcp_log_triage_server.core.models import LogLevel
 
 
@@ -77,21 +77,6 @@ def test_iter_entries_timestamp_policy_exclude(tmp_path: Path) -> None:
     )
 
     assert all(e.timestamp is not None for e in entries)
-
-
-def test_get_logs_ignores_limit(tmp_path: Path) -> None:
-    path = tmp_path / "app.log"
-    _write_bracket_log(path)
-
-    entries = get_logs(
-        path,
-        since=datetime(2025, 12, 30, 0, 0, 0, tzinfo=UTC),
-        until=datetime(2025, 12, 31, 0, 0, 0, tzinfo=UTC),
-        hours_lookback=None,
-        limit=1,
-    )
-
-    assert len(entries) == 3
 
 
 def test_iter_entries_missing_file_raises(tmp_path: Path) -> None:
