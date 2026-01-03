@@ -3,7 +3,8 @@ title: Resources
 description: Resource URIs exposed by the server.
 ---
 
-Resources are addressable blobs that clients can fetch by URI.
+Resources are addressable blobs that clients can fetch by URI. They are useful
+for sharing configuration hints, schemas, or sample data without invoking tools.
 
 ## Built-in Resources
 
@@ -11,6 +12,9 @@ Resources are addressable blobs that clients can fetch by URI.
 - `app://log-triage/config/scan-tokens`
 - `app://log-triage/schemas/ai-review-response`
 - `app://log-triage/examples/sample-log`
+
+Each built-in URI returns a small text or JSON payload. These are lightweight
+and safe for repeated calls.
 
 ## File Resources
 
@@ -21,7 +25,19 @@ Safety constraints:
 - Allowed extensions: `.log`, `.txt`, `.md` (and `.gz` variants)
 - Paths must stay inside `LOG_TRIAGE_BASE_DIR`
 
+Example:
+
+```
+file://samples/access.log
+```
+
 ## Log Tail Resource
 
 `log://{path}` returns the full log file contents using the same base directory
 rules as `file://{path}`.
+
+Example:
+
+```
+log://samples/syslog.log
+```
