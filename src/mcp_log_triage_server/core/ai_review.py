@@ -57,7 +57,7 @@ class AIReviewConfig:
         LogLevel.CRITICAL,
     )
 
-    # NEW: levels that DO get sent to AI (the “rest”)
+    # Levels that are sent to the AI review stage.
     ai_levels: tuple[LogLevel, ...] = (
         LogLevel.INFO,
         LogLevel.DEBUG,
@@ -78,6 +78,7 @@ class AITriageResult:
 
 
 def _redact(text: str) -> str:
+    """Redact sensitive tokens from log text."""
     text = _JWT_RE.sub("<REDACTED_JWT>", text)
     text = _EMAIL_RE.sub("<REDACTED_EMAIL>", text)
     text = _IPV4_RE.sub("<REDACTED_IP>", text)
@@ -86,6 +87,7 @@ def _redact(text: str) -> str:
 
 
 def _fmt_line(e: LogEntry) -> str:
+    """Format a log entry for the AI review prompt."""
     ts = e.timestamp.isoformat() if e.timestamp else "-"
     return f"{e.line_no} {ts} [{e.level.value}] {e.message}"
 
@@ -97,11 +99,7 @@ def _split_entries_for_ai(
     identified_levels: set[LogLevel],
     segment_max_lines: int,
 ) -> tuple[list[LogEntry], list[list[LogEntry]]]:
-    """Split entries into identified vs AI segments in a single pass.
-
-    - exclude_line_nos applies to BOTH outputs
-    - All lines are processed; no line limits are enforced
-    """
+    """Split entries into identified entries and AI review segments."""
     identified: list[LogEntry] = []
     segments: list[list[LogEntry]] = []
     current: list[LogEntry] = []
@@ -127,6 +125,7 @@ def _split_entries_for_ai(
 
 
 def _call_gemini_json(prompt: str, *, cfg: AIReviewConfig) -> AIReviewResponse:
+    """Call Gemini and validate the response against the schema."""
     api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
     if not api_key:
         raise RuntimeError("Missing GEMINI_API_KEY (or GOOGLE_API_KEY).")
@@ -169,6 +168,7 @@ def _call_gemini_json(prompt: str, *, cfg: AIReviewConfig) -> AIReviewResponse:
 
 
 def _review_segments(segments: list[list[LogEntry]], *, cfg: AIReviewConfig) -> AIReviewResponse:
+    """Review segments with the AI model and filter findings."""
     if not segments:
         return AIReviewResponse(findings=[])
 
@@ -220,7 +220,7 @@ def review_non_error_logs(
     if cfg is None:
         cfg = AIReviewConfig()
 
-    # NEW: iterate only the levels we care about
+    # Limit iteration to identified and AI-review levels.
     wanted_levels = set(cfg.identified_levels) | set(cfg.ai_levels)
 
     it = iter_entries(
@@ -259,10 +259,7 @@ def triage_with_ai_review(
     identified_limit: int | None = None,
     cfg: AIReviewConfig | None = None,
 ) -> AITriageResult:
-    """Split logs into identified entries and AI findings.
-
-    Lines not in identified_levels are chunked and sent to the AI review.
-    """
+    """Split logs into identified entries and AI findings."""
     if cfg is None:
         cfg = AIReviewConfig()
     _ = identified_limit
@@ -274,7 +271,7 @@ def triage_with_ai_review(
     )
     ai_set = set(cfg.ai_levels)
 
-    # NEW: iterate only levels we care about
+    # Limit iteration to identified and AI-review levels.
     wanted_levels = identified_set | ai_set
 
     it = iter_entries(
