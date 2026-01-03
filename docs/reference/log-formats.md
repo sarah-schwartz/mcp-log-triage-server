@@ -9,7 +9,10 @@ The parser chain is ordered and stops on the first match:
 2. Access logs (Common/Combined)
 3. Bracketed timestamps (`<timestamp> [LEVEL] <message>`)
 4. JSON lines (`{"timestamp": "...", "level": "...", "message": "..."}`)
-5. Loose level keywords (fallback)
+5. CEF (Common Event Format)
+6. Logfmt (`key=value` pairs)
+7. LTSV (Labeled Tab-Separated Values)
+8. Loose level keywords (fallback)
 
 ## Syslog
 
@@ -60,6 +63,38 @@ Example:
 
 ```
 {"timestamp":"2025-12-30T08:12:04Z","level":"error","message":"timeout"}
+```
+
+## CEF (Common Event Format)
+
+CEF lines start with `CEF:` and include a pipe-delimited header plus an
+extension of key/value fields.
+
+Example:
+
+```
+CEF:0|Security|ThreatManager|1.0|100|Login failed|8|src=1.2.3.4 rt=1735560000000 msg=bad_password
+```
+
+## Logfmt
+
+Logfmt uses space-separated `key=value` pairs. Values may be quoted when they
+contain spaces.
+
+Example:
+
+```
+time=2025-12-30T08:12:04Z level=error msg="upstream timeout"
+```
+
+## LTSV
+
+LTSV uses tab-separated `key:value` fields.
+
+Example:
+
+```
+time:2025-12-30T08:12:04Z\tlevel:warning\tmsg:slow_response
 ```
 
 ## Loose Level Keywords
