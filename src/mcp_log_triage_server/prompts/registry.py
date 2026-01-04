@@ -52,9 +52,44 @@ def register_prompts(mcp: FastMCP) -> None:
         log_path: str,
         hours_lookback: int = 24,
         levels: Sequence[str] | str = ("ERROR", "WARNING", "CRITICAL"),
+        since: str | None = None,
+        until: str | None = None,
+        date: str | None = None,
+        hour: str | None = None,
+        week: str | None = None,
+        month: str | None = None,
+        year: str | None = None,
+        days_lookback: int | None = None,
     ) -> list[dict[str, Any]]:
         """Build a prompt for structured log triage."""
         levels_display = _format_levels(levels)
+        time_lines: list[str] = []
+        if date is not None:
+            time_lines.append(f"- date: {date}")
+        elif hour is not None:
+            time_lines.append(f"- hour: {hour}")
+        elif week is not None:
+            time_lines.append(f"- week: {week}")
+        elif month is not None:
+            time_lines.append(f"- month: {month}")
+        elif year is not None:
+            time_lines.append(f"- year: {year}")
+        elif since is not None or until is not None:
+            if since is not None:
+                time_lines.append(f"- since: {since}")
+            if until is not None:
+                time_lines.append(f"- until: {until}")
+        elif days_lookback is not None:
+            time_lines.append(f"- days_lookback: {days_lookback}")
+        elif hours_lookback is not None:
+            time_lines.append(f"- hours_lookback: {hours_lookback}")
+        time_block = "\n".join(time_lines)
+        call_lines = [f"- log_path: {log_path}"]
+        if time_block:
+            call_lines.append(time_block)
+        call_lines.append(f"- levels: {levels_display}")
+        call_lines.append("- include_raw: true")
+        call_block = "\n".join(call_lines)
         return [
             {
                 "role": "system",
@@ -70,18 +105,17 @@ def register_prompts(mcp: FastMCP) -> None:
                     "Triage the log file using triage_logs. Follow this workflow:\n"
                     "- Always call triage_logs first with the parameters below. "
                     "Set include_raw to true so evidence can be quoted.\n"
-                    "- Time window: if since/until or date/hour/week/month/year is provided, "
-                    "use that and omit hours_lookback (do not send both).\n"
-                    "- Levels must be a JSON array of strings (e.g., [\"ERROR\", \"WARNING\"]).\n"
+                    "- Time window: use only one window type. Prefer "
+                    "date/hour/week/month/year or since/until when provided; otherwise use "
+                    "days_lookback/hours_lookback.\n"
+                    "- Levels must be a list of strings (Python list / JSON array), "
+                    "e.g., [\"ERROR\", \"WARNING\"].\n"
                     "- If no entries are returned, state that clearly and suggest "
                     "widening the time window or levels.\n"
                     "- Use only tool output or the log resource for evidence; do not fabricate lines.\n"
                     "- Keep the response concise and incident-focused.\n\n"
                     "Call triage_logs with:\n"
-                    f"- log_path: {log_path}\n"
-                    f"- hours_lookback: {hours_lookback}\n"
-                    f"- levels: {levels_display}\n"
-                    "- include_raw: true\n\n"
+                    f"{call_block}\n\n"
                     "Return this structure:\n"
                     "1) What happened (1-3 bullets)\n"
                     "2) Evidence (2-5 quoted lines; include line_no and raw line, "
