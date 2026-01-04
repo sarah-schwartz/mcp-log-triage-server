@@ -11,8 +11,8 @@ from typing import Any
 from mcp.server.fastmcp import FastMCP
 
 
-def _format_levels(levels: str | Sequence[str]) -> str:
-    """Return levels as a JSON-like list string for prompt display."""
+def _format_levels(levels: Sequence[str] | str) -> str:
+    """Return levels as a JSON array literal for prompt display."""
     if isinstance(levels, str):
         items = [s.strip().upper() for s in levels.split(",") if s.strip()]
     else:
@@ -34,7 +34,8 @@ def register_prompts(mcp: FastMCP) -> None:
                 "role": "system",
                 "content": (
                     "You are a precise assistant. Summarize the provided resource clearly and "
-                    "concisely."
+                    "concisely. Extract key points, risks, and actionable items. If the resource "
+                    "is code, summarize its purpose and main interfaces."
                 ),
             },
             {
@@ -50,7 +51,7 @@ def register_prompts(mcp: FastMCP) -> None:
     def triage_log_file(
         log_path: str,
         hours_lookback: int = 24,
-        levels: str = "ERROR,WARNING,CRITICAL",
+        levels: Sequence[str] | str = ("ERROR", "WARNING", "CRITICAL"),
     ) -> list[dict[str, Any]]:
         """Build a prompt for structured log triage."""
         levels_display = _format_levels(levels)
@@ -69,6 +70,9 @@ def register_prompts(mcp: FastMCP) -> None:
                     "Triage the log file using triage_logs. Follow this workflow:\n"
                     "- Always call triage_logs first with the parameters below. "
                     "Set include_raw to true so evidence can be quoted.\n"
+                    "- Time window: if since/until or date/hour/week/month/year is provided, "
+                    "use that and omit hours_lookback (do not send both).\n"
+                    "- Levels must be a JSON array of strings (e.g., [\"ERROR\", \"WARNING\"]).\n"
                     "- If no entries are returned, state that clearly and suggest "
                     "widening the time window or levels.\n"
                     "- Use only tool output or the log resource for evidence; do not fabricate lines.\n"
@@ -80,7 +84,8 @@ def register_prompts(mcp: FastMCP) -> None:
                     "- include_raw: true\n\n"
                     "Return this structure:\n"
                     "1) What happened (1-3 bullets)\n"
-                    "2) Evidence (2-5 quoted lines with timestamps/levels)\n"
+                    "2) Evidence (2-5 quoted lines; include line_no and raw line, "
+                    "e.g., [#123] 2025-... [ERROR] ...)\n"
                     "3) Suspected root cause (1-2 sentences; say 'Unknown' if unclear)\n"
                     "4) Next actions (2-4 bullets)\n"
                 ),
@@ -108,7 +113,10 @@ def register_prompts(mcp: FastMCP) -> None:
         return [
             {
                 "role": "system",
-                "content": "Create a high-quality bug report in Markdown.",
+                "content": (
+                    "Create a high-quality bug report in Markdown. Redact secrets, credentials, "
+                    "or PII if present."
+                ),
             },
             {
                 "role": "user",
