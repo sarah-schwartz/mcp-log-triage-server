@@ -34,7 +34,7 @@ file://samples/access.log
 ## Log Tail Resource
 
 `log://{path}` returns the full log file contents using the same base directory
-rules as `file://{path}`.
+and allowlist rules as `file://{path}` (including `.gz` for allowed suffixes).
 
 Example:
 

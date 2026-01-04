@@ -16,11 +16,14 @@ from mcp_log_triage_server.core.ai_review import AIReviewResponse
 from mcp_log_triage_server.core.formats import default_scan_config
 
 ALLOWED_FILE_SUFFIXES = {".log", ".txt", ".md"}
+BASE_DIR_ENV = "LOG_TRIAGE_BASE_DIR"
+TEXT_ENCODING = "utf-8"
+TEXT_ERRORS = "replace"
 
 
 def _base_dir() -> Path:
     """Return the resolved base directory for file resources."""
-    raw = os.getenv("LOG_TRIAGE_BASE_DIR", os.getcwd())
+    raw = os.getenv(BASE_DIR_ENV, os.getcwd())
     return Path(raw).resolve()
 
 
@@ -36,12 +39,37 @@ def _safe_resolve(path: str) -> Path:
     return p
 
 
+def _allowed_suffix(path: Path) -> str:
+    """Return the effective suffix for allowlist checks."""
+    suffix = path.suffix.lower()
+    if suffix == ".gz":
+        suffix = path.with_suffix("").suffix.lower()
+    return suffix
+
+
+def _ensure_allowed_suffix(path: Path) -> None:
+    """Validate the file suffix against the allowlist."""
+    suffix = _allowed_suffix(path)
+    if suffix not in ALLOWED_FILE_SUFFIXES:
+        allowed = ", ".join(sorted(ALLOWED_FILE_SUFFIXES))
+        raise ValueError(f"File type not allowed. Allowed: {allowed}.")
+
+
+def _resolve_resource_path(path: str) -> Path:
+    """Resolve and validate a resource file path."""
+    resolved = _safe_resolve(path)
+    if not resolved.is_file():
+        raise FileNotFoundError(f"File not found: {resolved}")
+    _ensure_allowed_suffix(resolved)
+    return resolved
+
+
 def _open_text(path: Path) -> str:
     """Read text from a file, supporting optional gzip compression."""
     if path.suffix.lower() == ".gz":
-        with gzip.open(path, mode="rt", encoding="utf-8", errors="replace") as f:
+        with gzip.open(path, mode="rt", encoding=TEXT_ENCODING, errors=TEXT_ERRORS) as f:
             return f.read()
-    return path.read_text(encoding="utf-8", errors="replace")
+    return path.read_text(encoding=TEXT_ENCODING, errors=TEXT_ERRORS)
 
 
 def register_resources(mcp: FastMCP) -> None:
@@ -50,14 +78,17 @@ def register_resources(mcp: FastMCP) -> None:
     @mcp.resource("app://log-triage/help")
     def help_resource() -> str:
         """Return a short list of available resource URIs."""
+        allowed = ", ".join(sorted(ALLOWED_FILE_SUFFIXES))
+        base = _base_dir()
         return (
             "Resources:\n"
             "- app://log-triage/help\n"
             "- app://log-triage/config/scan-tokens\n"
             "- app://log-triage/schemas/ai-review-response\n"
             "- app://log-triage/examples/sample-log\n"
-            "- file://{path} (restricted + allowlist)\n"
-            "- log://{path}\n"
+            f"- file://{{path}} (restricted to {BASE_DIR_ENV}; allowed: {allowed}, .gz)\n"
+            "- log://{path} (same rules as file://; intended for logs)\n"
+            f"\nBase directory: {base}\n"
         )
 
     @mcp.resource("app://log-triage/examples/sample-log")
@@ -87,23 +118,11 @@ def register_resources(mcp: FastMCP) -> None:
     @mcp.resource("file://{path}")
     def read_file(path: str) -> str:
         """Read a text file from within LOG_TRIAGE_BASE_DIR."""
-        p = _safe_resolve(path)
-
-        # Enforce allowlisted suffixes, including .gz double suffixes.
-        suffix = p.suffix.lower()
-        if suffix == ".gz":
-            second = p.with_suffix("").suffix.lower()
-            if second not in ALLOWED_FILE_SUFFIXES:
-                raise ValueError("File type not allowed")
-        else:
-            if suffix not in ALLOWED_FILE_SUFFIXES:
-                raise ValueError("File type not allowed")
-
+        p = _resolve_resource_path(path)
         return _open_text(p)
 
     @mcp.resource("log://{path}")
     def tail_log(path: str) -> str:
         """Return the full log contents."""
-
-        p = _safe_resolve(path)
+        p = _resolve_resource_path(path)
         return _open_text(p)
