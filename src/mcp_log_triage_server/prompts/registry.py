@@ -81,7 +81,7 @@ def register_prompts(mcp: FastMCP) -> None:
                 time_lines.append(f"- until: {until}")
         elif days_lookback is not None:
             time_lines.append(f"- days_lookback: {days_lookback}")
-        elif hours_lookback is not None:
+        else:
             time_lines.append(f"- hours_lookback: {hours_lookback}")
         time_block = "\n".join(time_lines)
         call_lines = [f"- log_path: {log_path}"]
@@ -105,11 +105,12 @@ def register_prompts(mcp: FastMCP) -> None:
                     "Triage the log file using triage_logs. Follow this workflow:\n"
                     "- Always call triage_logs first with the parameters below. "
                     "Set include_raw to true so evidence can be quoted.\n"
-                    "- Time window: use only one window type. Prefer "
-                    "date/hour/week/month/year or since/until when provided; otherwise use "
-                    "days_lookback/hours_lookback.\n"
+                    "- Time window: use only one window type. If multiple are provided, "
+                    "choose the most specific (date/hour/week/month/year > since/until "
+                    "> days_lookback/hours_lookback) and ignore the rest.\n"
                     "- Levels must be a list of strings (Python list / JSON array), "
-                    "e.g., [\"ERROR\", \"WARNING\"].\n"
+                    "e.g., [\"ERROR\", \"WARNING\"]. Pass levels in the tool call as "
+                    "list[str] (not a comma-separated string).\n"
                     "- If no entries are returned, state that clearly and suggest "
                     "widening the time window or levels.\n"
                     "- Use only tool output or the log resource for evidence; do not fabricate lines.\n"
@@ -165,7 +166,8 @@ def register_prompts(mcp: FastMCP) -> None:
                     "- Suspected Cause\n"
                     "- Suggested Fix / Next Actions\n\n"
                     f"Steps provided:\n{steps}\n\n"
-                    f"Use tool triage_logs on {log_path} for last {hours_lookback} hours.\n"
+                    f"Use tool triage_logs on {log_path} for last {hours_lookback} hours "
+                    "with include_raw=true.\n"
                 ),
             },
             {
