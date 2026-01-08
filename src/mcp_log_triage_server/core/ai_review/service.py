@@ -5,11 +5,11 @@ Turns a set of log entries into a structured AI review response.
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import logging
 import os
 import time
-import asyncio
 from collections.abc import AsyncIterable, Iterable
 from datetime import datetime
 

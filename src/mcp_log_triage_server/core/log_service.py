@@ -43,7 +43,7 @@ async def _open_text(path: Path, *, encoding: str, decode_errors: str):
         finally:
             await af.close()
     else:
-        async with aiofiles.open(path, mode="r", encoding=encoding, errors=decode_errors) as f:
+        async with aiofiles.open(path, encoding=encoding, errors=decode_errors) as f:
             yield f
 
 
