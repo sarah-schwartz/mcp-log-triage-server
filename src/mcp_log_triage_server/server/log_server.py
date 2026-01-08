@@ -43,7 +43,7 @@ register_prompts(mcp)
 
 
 @mcp.tool()
-def triage_logs(
+async def triage_logs(
     log_path: str,
     since: str | None = None,
     until: str | None = None,
@@ -93,7 +93,7 @@ def triage_logs(
     - Time window precedence: selectors > lookback > since/until > last 24 hours
     - include_ai_review cannot be combined with include_all_levels
     """
-    return triage_logs_impl(
+    return await triage_logs_impl(
         log_path=log_path,
         since=since,
         until=until,

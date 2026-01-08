@@ -5,6 +5,7 @@ Resources are addressable by URI and can be fetched by the MCP client on demand.
 
 from __future__ import annotations
 
+import asyncio
 import gzip
 import os
 from pathlib import Path
@@ -116,13 +117,13 @@ def register_resources(mcp: FastMCP) -> None:
         return AIReviewResponse.model_json_schema()
 
     @mcp.resource("file://{path}")
-    def read_file(path: str) -> str:
+    async def read_file(path: str) -> str:
         """Read a text file from within LOG_TRIAGE_BASE_DIR."""
         p = _resolve_resource_path(path)
-        return _open_text(p)
+        return await asyncio.to_thread(_open_text, p)
 
     @mcp.resource("log://{path}")
-    def tail_log(path: str) -> str:
+    async def tail_log(path: str) -> str:
         """Return the full log contents."""
         p = _resolve_resource_path(path)
-        return _open_text(p)
+        return await asyncio.to_thread(_open_text, p)

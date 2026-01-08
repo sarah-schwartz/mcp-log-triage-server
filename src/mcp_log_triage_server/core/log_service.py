@@ -6,9 +6,13 @@ This module is the main integration point that reads log files and returns norma
 from __future__ import annotations
 
 import gzip
-from collections.abc import Iterable, Iterator
+from collections.abc import AsyncIterator, Iterable
+from contextlib import asynccontextmanager
 from datetime import UTC, datetime, timedelta, tzinfo
 from pathlib import Path
+
+import aiofiles
+from aiofiles.threadpool import wrap
 
 from .formats import (
     AccessLogParser,
@@ -28,11 +32,19 @@ from .models import LogEntry, LogLevel
 from .scanning import DetectedFormat, iter_hits, sniff_format
 
 
-def _open_text(path: Path, *, encoding: str, decode_errors: str):
-    """Open a log file for text reading (plain or gzip)."""
+@asynccontextmanager
+async def _open_text(path: Path, *, encoding: str, decode_errors: str):
+    """Open a log file for async text reading (plain or gzip)."""
     if path.suffix.lower() == ".gz":
-        return gzip.open(path, mode="rt", encoding=encoding, errors=decode_errors)
-    return path.open("r", encoding=encoding, errors=decode_errors)
+        f = gzip.open(path, mode="rt", encoding=encoding, errors=decode_errors)
+        af = wrap(f)
+        try:
+            yield af
+        finally:
+            await af.close()
+    else:
+        async with aiofiles.open(path, mode="r", encoding=encoding, errors=decode_errors) as f:
+            yield f
 
 
 def default_parser() -> LogParser:
@@ -96,7 +108,7 @@ def _drop_raw(entry: LogEntry) -> LogEntry:
     )
 
 
-def iter_entries(
+async def iter_entries(
     log_path: str | Path,
     *,
     parser: LogParser | None = None,
@@ -116,7 +128,7 @@ def iter_entries(
     timestamp_policy: str = "include",  # include|exclude when timestamp is None
     sniff_lines: int = 120,
     include_raw: bool = True,
-) -> Iterator[LogEntry]:
+) -> AsyncIterator[LogEntry]:
     """Yield parsed entries after optional prefiltering and filtering."""
     path = Path(log_path)
     if not path.is_file():
@@ -163,11 +175,11 @@ def iter_entries(
             return False
         return True
 
-    detected = sniff_format(path, sample_lines=sniff_lines)
+    detected = await sniff_format(path, sample_lines=sniff_lines)
 
     # Fast path: scan candidates first only when format is recognized.
     if fast_prefilter and detected != DetectedFormat.UNKNOWN:
-        for hit in iter_hits(path, scan=scan, detected=detected, sample_lines=sniff_lines):
+        async for hit in iter_hits(path, scan=scan, detected=detected, sample_lines=sniff_lines):
             # Filter by bytes before decoding to save work on large logs.
             if contains_b is not None and contains_b not in hit.raw_line:
                 continue
@@ -197,8 +209,8 @@ def iter_entries(
         return
 
     # Slow path: parse every line (max compatibility).
-    with _open_text(path, encoding=encoding, decode_errors=decode_errors) as f:
-        for line_no, line in enumerate(f, start=1):
+    async with _open_text(path, encoding=encoding, decode_errors=decode_errors) as f:
+        async for line_no, line in _enumerate_async(f, start=1):
             line = line.rstrip("\r\n")
             if contains is not None and contains not in line:
                 continue
@@ -217,9 +229,17 @@ def iter_entries(
             yield entry
 
 
-def get_logs(
+async def get_logs(
     log_path: str | Path,
     **iter_kwargs,
 ) -> list[LogEntry]:
     """Collect iter_entries into a list."""
-    return list(iter_entries(log_path, **iter_kwargs))
+    return [entry async for entry in iter_entries(log_path, **iter_kwargs)]
+
+
+async def _enumerate_async(iterable, start: int = 0):
+    """Async enumerate helper for async iterators."""
+    index = start
+    async for item in iterable:
+        yield index, item
+        index += 1

@@ -11,7 +11,8 @@ This project exposes a single primary MCP tool (`triage_logs`) along with suppor
 - An MCP (Model Context Protocol) server over stdio
 - One main tool for querying log files in a structured way
 - Support for multiple common log formats
-- Optional AI review for non-error signals with redaction
+- Optional AI review for non-error signals with
+ redaction
 
 ---
 
@@ -36,6 +37,9 @@ This project exposes a single primary MCP tool (`triage_logs`) along with suppor
   - Tool: `triage_logs`
   - Resources for sample data and file access
   - Prompts for guided triage and reporting
+
+- **Async log IO**
+  - Non-blocking scans to allow concurrent triage requests
 
 - **Optional AI review**
   - Reviews non-error signals
@@ -159,11 +163,3 @@ When `include_ai_review=true`:
 - `tests` — mirrors `src`
 - `docs` — extended documentation
 - `samples` — example log files
-
----
-
-Recommended content:
-
-- One `triage_logs` call
-- The JSON request
-- The structured response

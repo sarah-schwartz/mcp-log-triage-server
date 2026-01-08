@@ -16,7 +16,7 @@ description: Module layout and data flow.
 1. MCP tool receives inputs in `server/log_server.py`
 2. Inputs are normalized in `tools/triage.py`
 3. Time windows are resolved in `core/time_window.py`
-4. Files are scanned and parsed in `core/log_service.py`
+4. Files are scanned and parsed asynchronously in `core/log_service.py`
 5. Parsed `LogEntry` objects are returned to the tool and serialized
 
 ## Parsing Pipeline Details
@@ -25,6 +25,9 @@ description: Module layout and data flow.
 - `core/formats/` contains the parser implementations that normalize entries
 - `core/log_service.py` applies time windows, severity filters, and substring
   filters before yielding entries
+
+Async log IO is handled via `aiofiles` to keep the server responsive under
+concurrent requests.
 
 ## Extension Points
 

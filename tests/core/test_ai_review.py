@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 from mcp_log_triage_server.core.ai_review import (
     AIFinding,
     AIReviewResponse,
@@ -70,7 +72,8 @@ def test_split_entries_for_ai_excludes_line_numbers() -> None:
     assert segments == []
 
 
-def test_review_non_error_logs_excludes_identified_levels(tmp_path, monkeypatch) -> None:
+@pytest.mark.asyncio
+async def test_review_non_error_logs_excludes_identified_levels(tmp_path, monkeypatch) -> None:
     log_path = tmp_path / "app.log"
     log_path.write_text(
         "\n".join(
@@ -103,7 +106,7 @@ def test_review_non_error_logs_excludes_identified_levels(tmp_path, monkeypatch)
 
     monkeypatch.setattr(ai_service, "_call_gemini_json", fake_call)
 
-    review_non_error_logs(
+    await review_non_error_logs(
         log_path=str(log_path),
         exclude_line_nos=set(),
         hours_lookback=None,

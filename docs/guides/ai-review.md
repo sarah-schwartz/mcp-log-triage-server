@@ -11,6 +11,9 @@ By default, identified levels are WARNING/ERROR/CRITICAL and are returned in
 `entries`. Remaining lines are chunked, redacted, and sent to the AI review
 pipeline.
 
+The AI review helpers are async to avoid blocking the event loop during file
+reads and model calls.
+
 ## Requirements
 
 - Install the extra: `uv pip install -e ".[ai]"`
@@ -30,21 +33,25 @@ long tokens) before sending content to the model.
 ## Example Usage
 
 ```python
+import asyncio
 from datetime import UTC, datetime, timedelta
 
 from mcp_log_triage_server.core.ai_review import review_non_error_logs
 
-now = datetime.now(UTC)
-response = review_non_error_logs(
-    "samples/bracket.log",
-    exclude_line_nos=set(),
-    hours_lookback=None,
-    since=now - timedelta(hours=2),
-    until=now,
-)
+async def main() -> None:
+    now = datetime.now(UTC)
+    response = await review_non_error_logs(
+        "samples/bracket.log",
+        exclude_line_nos=set(),
+        hours_lookback=None,
+        since=now - timedelta(hours=2),
+        until=now,
+    )
 
-for finding in response.findings:
-    print(finding.title, finding.confidence)
+    for finding in response.findings:
+        print(finding.title, finding.confidence)
+
+asyncio.run(main())
 ```
 
 ## Operational Notes

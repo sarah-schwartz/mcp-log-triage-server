@@ -20,6 +20,7 @@ Tests mirror the `src/` structure. For example:
 
 - One behavior per test for clear failures.
 - Use `tmp_path` to create log files in isolation.
+- Mark async tests with `@pytest.mark.asyncio`.
 - Avoid network calls and external services in unit tests.
 - Prefer deterministic timestamps and explicit windows in time-based tests.
 
