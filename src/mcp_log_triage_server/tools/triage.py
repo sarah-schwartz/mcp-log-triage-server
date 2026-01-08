@@ -56,7 +56,7 @@ def _entry_to_dict(entry: LogEntry, *, include_raw: bool) -> dict[str, Any]:
     return d
 
 
-def triage_logs_impl(
+async def triage_logs_impl(
     *,
     log_path: str,
     since: str | None = None,
@@ -135,7 +135,7 @@ def triage_logs_impl(
     sev = _parse_levels(levels_eff)
 
     if include_ai_review:
-        result = triage_with_ai_review(
+        result = await triage_with_ai_review(
             log_path=log_path,
             exclude_line_nos=set(),
             hours_lookback=None if has_window else 24,
@@ -151,7 +151,7 @@ def triage_logs_impl(
             "ai_findings": [f.model_dump() for f in result.ai_review.findings],
         }
 
-    entries = get_logs(
+    entries = await get_logs(
         log_path=log_path,
         parser=default_parser(),
         hours_lookback=None if has_window else 24,

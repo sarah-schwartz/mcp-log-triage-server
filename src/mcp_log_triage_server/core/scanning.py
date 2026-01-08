@@ -6,9 +6,11 @@ Optimized byte-level scanning used before expensive parsing.
 from __future__ import annotations
 
 import re
-from collections.abc import Iterator, Sequence
+from collections.abc import AsyncIterator, Sequence
 from enum import Enum
 from pathlib import Path
+
+import aiofiles
 
 from .formats import AccessLogParser, ScanConfig, SyslogParser, default_scan_config
 from .models import LogHit, LogLevel
@@ -39,7 +41,7 @@ _ACCESS_RE = re.compile(rb'^\S+\s+\S+\s+\S+\s+\[[^\]]+\]\s+"[^"]+"\s+(?P<status>
 _BRACKET_HINT_RE = re.compile(rb"\[\s*(ERROR|WARN(?:ING)?|INFO|DEBUG|CRITICAL)\s*\]", re.IGNORECASE)
 
 
-def sniff_format(
+async def sniff_format(
     log_path: str | Path,
     *,
     sample_lines: int = 120,
@@ -56,8 +58,8 @@ def sniff_format(
     bracket_hits = 0
     seen = 0
 
-    with path.open("rb") as f:
-        for raw in f:
+    async with aiofiles.open(path, mode="rb") as f:
+        async for raw in f:
             seen += 1
             line = raw[:max_bytes_per_line].strip()
             if not line:
@@ -91,13 +93,13 @@ def sniff_format(
     return DetectedFormat.UNKNOWN
 
 
-def iter_hits(
+async def iter_hits(
     log_path: str | Path,
     *,
     scan: ScanConfig | None = None,
     detected: DetectedFormat | None = None,
     sample_lines: int = 120,
-) -> Iterator[LogHit]:
+) -> AsyncIterator[LogHit]:
     """Yield fast-scan hits using format-aware scanning."""
     scan = scan or default_scan_config()
 
@@ -105,22 +107,25 @@ def iter_hits(
     if not path.is_file():
         raise FileNotFoundError(f"Log file not found: {path}")
 
-    fmt = detected or sniff_format(path, sample_lines=sample_lines)
+    fmt = detected or await sniff_format(path, sample_lines=sample_lines)
 
     if fmt == DetectedFormat.ACCESS:
-        yield from _iter_access_hits(path)
+        async for hit in _iter_access_hits(path):
+            yield hit
         return
     if fmt == DetectedFormat.SYSLOG:
-        yield from _iter_syslog_hits(path)
+        async for hit in _iter_syslog_hits(path):
+            yield hit
         return
 
-    yield from _iter_token_hits(path, scan=scan)
+    async for hit in _iter_token_hits(path, scan=scan):
+        yield hit
 
 
-def _iter_access_hits(path: Path) -> Iterator[LogHit]:
+async def _iter_access_hits(path: Path) -> AsyncIterator[LogHit]:
     """Yield warning/error hits based on access-log status codes."""
-    with path.open("rb") as f:
-        for line_no, raw in enumerate(f, start=1):
+    async with aiofiles.open(path, mode="rb") as f:
+        async for line_no, raw in _enumerate_async(f, start=1):
             m = _ACCESS_RE.match(raw)
             if not m:
                 continue
@@ -130,10 +135,10 @@ def _iter_access_hits(path: Path) -> Iterator[LogHit]:
                 yield LogHit(line_no=line_no, level=level, raw_line=raw)
 
 
-def _iter_syslog_hits(path: Path) -> Iterator[LogHit]:
+async def _iter_syslog_hits(path: Path) -> AsyncIterator[LogHit]:
     """Yield warning/error hits based on syslog PRI severity."""
-    with path.open("rb") as f:
-        for line_no, raw in enumerate(f, start=1):
+    async with aiofiles.open(path, mode="rb") as f:
+        async for line_no, raw in _enumerate_async(f, start=1):
             m = _SYSLOG_PRI_RE.match(raw)
             if not m:
                 continue
@@ -143,10 +148,10 @@ def _iter_syslog_hits(path: Path) -> Iterator[LogHit]:
                 yield LogHit(line_no=line_no, level=level, raw_line=raw)
 
 
-def _iter_token_hits(path: Path, *, scan: ScanConfig) -> Iterator[LogHit]:
+async def _iter_token_hits(path: Path, *, scan: ScanConfig) -> AsyncIterator[LogHit]:
     """Yield hits using the configured byte token scan."""
-    with path.open("rb") as f:
-        for line_no, raw in enumerate(f, start=1):
+    async with aiofiles.open(path, mode="rb") as f:
+        async for line_no, raw in _enumerate_async(f, start=1):
             hay = raw.upper() if scan.case_insensitive else raw
 
             matched_level: LogLevel | None = None
@@ -166,3 +171,11 @@ def _iter_token_hits(path: Path, *, scan: ScanConfig) -> Iterator[LogHit]:
 
             if matched_level is not None:
                 yield LogHit(line_no=line_no, level=matched_level, raw_line=raw)
+
+
+async def _enumerate_async(iterable, start: int = 0):
+    """Async enumerate helper for async iterators."""
+    index = start
+    async for item in iterable:
+        yield index, item
+        index += 1

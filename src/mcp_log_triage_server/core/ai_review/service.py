@@ -5,11 +5,12 @@ Turns a set of log entries into a structured AI review response.
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import logging
 import os
 import time
-from collections.abc import Iterable
+from collections.abc import AsyncIterable, Iterable
 from datetime import datetime
 
 from ..log_service import iter_entries
@@ -46,6 +47,38 @@ def _split_entries_for_ai(
     current: list[LogEntry] = []
 
     for e in entries:
+        if e.line_no in exclude_line_nos:
+            continue
+
+        if e.level in identified_levels:
+            identified.append(e)
+            continue
+
+        current.append(e)
+
+        if len(current) >= segment_max_lines:
+            segments.append(current)
+            current = []
+
+    if current:
+        segments.append(current)
+
+    return identified, segments
+
+
+async def _split_entries_for_ai_async(
+    entries: AsyncIterable[LogEntry],
+    *,
+    exclude_line_nos: set[int],
+    identified_levels: set[LogLevel],
+    segment_max_lines: int,
+) -> tuple[list[LogEntry], list[list[LogEntry]]]:
+    """Split async entries into identified entries and AI review segments."""
+    identified: list[LogEntry] = []
+    segments: list[list[LogEntry]] = []
+    current: list[LogEntry] = []
+
+    async for e in entries:
         if e.line_no in exclude_line_nos:
             continue
 
@@ -106,7 +139,7 @@ def _call_gemini_json(prompt: str, *, cfg: AIReviewConfig) -> AIReviewResponse:
     ) from last_err
 
 
-def _review_segments(
+async def _review_segments(
     segments: list[list[LogEntry]],
     *,
     cfg: AIReviewConfig,
@@ -131,7 +164,7 @@ def _review_segments(
 
         prompt = build_ai_review_prompt(text, identified_levels=identified_levels)
 
-        resp = _call_gemini_json(prompt, cfg=cfg)
+        resp = await asyncio.to_thread(_call_gemini_json, prompt, cfg=cfg)
         for f in resp.findings:
             if f.confidence >= cfg.min_confidence:
                 findings.append(f)
@@ -139,7 +172,7 @@ def _review_segments(
     return AIReviewResponse(findings=findings)
 
 
-def review_non_error_logs(
+async def review_non_error_logs(
     log_path: str,
     *,
     exclude_line_nos: set[int],
@@ -169,21 +202,21 @@ def review_non_error_logs(
         include_raw=True,
     )
 
-    _, segments = _split_entries_for_ai(
+    _, segments = await _split_entries_for_ai_async(
         it,
         exclude_line_nos=exclude_line_nos,
         identified_levels=set(cfg.identified_levels),
         segment_max_lines=cfg.segment_max_lines,
     )
 
-    return _review_segments(
+    return await _review_segments(
         segments,
         cfg=cfg,
         identified_levels=cfg.identified_levels,
     )
 
 
-def triage_with_ai_review(
+async def triage_with_ai_review(
     log_path: str,
     *,
     exclude_line_nos: set[int],
@@ -223,7 +256,7 @@ def triage_with_ai_review(
         include_raw=True,
     )
 
-    identified, segments = _split_entries_for_ai(
+    identified, segments = await _split_entries_for_ai_async(
         it,
         exclude_line_nos=exclude_line_nos,
         identified_levels=identified_set,
@@ -232,7 +265,7 @@ def triage_with_ai_review(
 
     return AITriageResult(
         identified_entries=identified,
-        ai_review=_review_segments(
+        ai_review=await _review_segments(
             segments,
             cfg=cfg,
             identified_levels=identified_set,

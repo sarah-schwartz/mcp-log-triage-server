@@ -14,6 +14,9 @@ Use this tool to scan local logs for relevant incidents without loading the
 entire file into memory. The server can prefilter large logs and then parse
 recognized formats for structured output.
 
+The tool runs asynchronously in the server so multiple triage requests can
+execute concurrently without blocking the event loop.
+
 ## Inputs
 
 `log_path` (str)

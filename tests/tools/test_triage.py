@@ -9,11 +9,12 @@ from mcp_log_triage_server.core.ai_review import service as ai_service
 from mcp_log_triage_server.tools.triage import triage_logs_impl
 
 
-def test_triage_logs_impl_filters_levels_and_contains(tmp_path: Path, write_log) -> None:
+@pytest.mark.asyncio
+async def test_triage_logs_impl_filters_levels_and_contains(tmp_path: Path, write_log) -> None:
     log = tmp_path / "app.log"
     write_log(log)
 
-    out = triage_logs_impl(
+    out = await triage_logs_impl(
         log_path=str(log),
         date="2025-12-30",
         levels=["error", "critical"],
@@ -28,7 +29,8 @@ def test_triage_logs_impl_filters_levels_and_contains(tmp_path: Path, write_log)
     assert "raw" not in entry
 
 
-def test_triage_logs_impl_year_selector(tmp_path: Path) -> None:
+@pytest.mark.asyncio
+async def test_triage_logs_impl_year_selector(tmp_path: Path) -> None:
     log = tmp_path / "app.log"
     log.write_text(
         "\n".join(
@@ -43,7 +45,7 @@ def test_triage_logs_impl_year_selector(tmp_path: Path) -> None:
         encoding="utf-8",
     )
 
-    out = triage_logs_impl(
+    out = await triage_logs_impl(
         log_path=str(log),
         year="2025",
         include_all_levels=True,
@@ -52,11 +54,15 @@ def test_triage_logs_impl_year_selector(tmp_path: Path) -> None:
     assert out["count"] == 2
 
 
-def test_triage_logs_impl_include_all_levels_overrides_levels(tmp_path: Path, write_log) -> None:
+@pytest.mark.asyncio
+async def test_triage_logs_impl_include_all_levels_overrides_levels(
+    tmp_path: Path,
+    write_log,
+) -> None:
     log = tmp_path / "app.log"
     write_log(log)
 
-    out = triage_logs_impl(
+    out = await triage_logs_impl(
         log_path=str(log),
         date="2025-12-30",
         levels=["error"],
@@ -66,23 +72,25 @@ def test_triage_logs_impl_include_all_levels_overrides_levels(tmp_path: Path, wr
     assert out["count"] == 4
 
 
-def test_triage_logs_impl_invalid_level(tmp_path: Path, write_log) -> None:
+@pytest.mark.asyncio
+async def test_triage_logs_impl_invalid_level(tmp_path: Path, write_log) -> None:
     log = tmp_path / "app.log"
     write_log(log)
 
     with pytest.raises(ValueError):
-        triage_logs_impl(
+        await triage_logs_impl(
             log_path=str(log),
             date="2025-12-30",
             levels=["not-a-level"],
         )
 
 
-def test_triage_logs_impl_include_raw(tmp_path: Path, write_log) -> None:
+@pytest.mark.asyncio
+async def test_triage_logs_impl_include_raw(tmp_path: Path, write_log) -> None:
     log = tmp_path / "app.log"
     write_log(log)
 
-    out = triage_logs_impl(
+    out = await triage_logs_impl(
         log_path=str(log),
         date="2025-12-30",
         levels=["error"],
@@ -93,7 +101,12 @@ def test_triage_logs_impl_include_raw(tmp_path: Path, write_log) -> None:
     assert "raw" in out["entries"][0]
 
 
-def test_triage_logs_impl_include_ai_review(tmp_path: Path, monkeypatch, write_log) -> None:
+@pytest.mark.asyncio
+async def test_triage_logs_impl_include_ai_review(
+    tmp_path: Path,
+    monkeypatch,
+    write_log,
+) -> None:
     log = tmp_path / "app.log"
     write_log(log)
 
@@ -113,7 +126,7 @@ def test_triage_logs_impl_include_ai_review(tmp_path: Path, monkeypatch, write_l
 
     monkeypatch.setattr(ai_service, "_call_gemini_json", fake_call)
 
-    out = triage_logs_impl(
+    out = await triage_logs_impl(
         log_path=str(log),
         date="2025-12-30",
         include_ai_review=True,
@@ -124,12 +137,16 @@ def test_triage_logs_impl_include_ai_review(tmp_path: Path, monkeypatch, write_l
     assert out["ai_findings"][0]["title"] == "Test"
 
 
-def test_triage_logs_impl_include_ai_review_conflicts(tmp_path: Path, write_log) -> None:
+@pytest.mark.asyncio
+async def test_triage_logs_impl_include_ai_review_conflicts(
+    tmp_path: Path,
+    write_log,
+) -> None:
     log = tmp_path / "app.log"
     write_log(log)
 
     with pytest.raises(ValueError):
-        triage_logs_impl(
+        await triage_logs_impl(
             log_path=str(log),
             date="2025-12-30",
             include_ai_review=True,
