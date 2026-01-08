@@ -41,6 +41,10 @@ This project exposes a single primary MCP tool (`triage_logs`) along with suppor
 - **Async log IO**
   - Non-blocking scans to allow concurrent triage requests
 
+- **Parallel parsing (non-.gz)**
+  - Reader -> queue -> worker pool -> ordered aggregator (keeps line_no order)
+  - Tune with `LOG_TRIAGE_MAX_WORKERS`
+
 - **Optional AI review**
   - Reviews non-error signals
   - Redacts PII and tokens before sending
@@ -128,12 +132,14 @@ uv pip install -e ".[ai]"
 Environment variables:
 
 - `GEMINI_API_KEY` or `GOOGLE_API_KEY`
+- `LOG_TRIAGE_MAX_WORKERS` (optional, overrides default parser worker count)
 
 When `include_ai_review=true`:
 
 - Warning/error entries are excluded
 - Remaining lines are redacted and analyzed
 - Findings are returned under `ai_findings`
+- AI review requests run concurrently (see `AIReviewConfig.max_concurrent_requests`)
 
 ---
 

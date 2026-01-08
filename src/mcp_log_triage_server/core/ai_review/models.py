@@ -48,6 +48,7 @@ class AIReviewConfig:
     temperature: float = 0.0
     redact: bool = True
     max_retries: int = 3
+    max_concurrent_requests: int = 3
 
 
 @dataclass(frozen=True, slots=True)
