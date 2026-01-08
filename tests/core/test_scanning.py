@@ -6,7 +6,6 @@ import pytest
 
 from mcp_log_triage_server.core.formats import default_scan_config
 from mcp_log_triage_server.core.models import LogLevel
-
 from mcp_log_triage_server.core.scanning import DetectedFormat, iter_hits, sniff_format
 
 
