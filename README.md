@@ -6,13 +6,21 @@ This project exposes a single primary MCP tool (`triage_logs`) along with suppor
 
 ---
 
+## Quickstart
+
+```bash
+uv venv
+source .venv/bin/activate  # Windows: .venv\Scripts\activate
+uv pip install -e .
+python -m mcp_log_triage_server
+```
+
 ## What This Server Provides
 
 - An MCP (Model Context Protocol) server over stdio
 - One main tool for querying log files in a structured way
 - Support for multiple common log formats
-- Optional AI review for non-error signals with
- redaction
+- Optional AI review for non-error signals with redaction
 
 ---
 
@@ -51,6 +59,15 @@ This project exposes a single primary MCP tool (`triage_logs`) along with suppor
 
 ---
 
+## How It Works (High Level)
+
+- Sniff format from the first N lines, then fast-scan for candidate lines when possible
+- Parse lines into normalized entries (parallel parsing for non-.gz)
+- Filter by time window, severity, and substring
+- Optional AI review runs on non-error levels and returns structured findings
+
+---
+
 ## Requirements
 
 - Python 3.13+
@@ -59,16 +76,7 @@ This project exposes a single primary MCP tool (`triage_logs`) along with suppor
 
 ---
 
-## Quickstart (stdio)
-
-```bash
-uv venv
-source .venv/bin/activate  # Windows: .venv\Scripts\activate
-uv pip install -e .
-python -m mcp_log_triage_server
-```
-
-Or via the console script:
+## Running (stdio)
 
 ```bash
 log-triage-mcp
@@ -76,15 +84,28 @@ log-triage-mcp
 
 ---
 
-## Example MCP Tool Call
+## Configuration
+
+Environment variables:
+
+- `GEMINI_API_KEY` or `GOOGLE_API_KEY`
+- `LOG_TRIAGE_MAX_WORKERS` (optional, overrides default parser worker count)
+- `LOG_TRIAGE_AI_MAX_CONCURRENCY` (optional, overrides AI review concurrency)
+- `LOG_TRIAGE_BASE_DIR` (optional, base directory for file:// and log://)
+
+---
+
+## Examples
+
+### Basic triage
 
 Request:
 
 ```json
 {
   "log_path": "samples/access.log",
-  "date": "2025-12-31",
-  "levels": ["error", "critical"],
+  "date": "2025-12-29",
+  "levels": ["error"],
   "include_raw": true
 }
 ```
@@ -96,17 +117,53 @@ Response (shape):
   "count": 1,
   "entries": [
     {
-      "line_no": 42,
-      "timestamp": "2025-12-31T08:12:04Z",
+      "timestamp": "2025-12-29T10:05:02+00:00",
       "level": "error",
-      "message": "upstream timeout",
-      "raw": "2025-12-31T08:12:04Z [ERROR] upstream timeout"
+      "message": "127.0.0.1 \"POST /api/v1/login HTTP/1.1\" -> 500 (42 bytes)",
+      "line_no": 3,
+      "raw": "127.0.0.1 - - [29/Dec/2025:10:05:02 +0000] \"POST /api/v1/login HTTP/1.1\" 500 42 \"-\" \"curl/8.0\""
     }
   ]
 }
 ```
 
----
+## Inspector examples
+
+Use these payloads in MCP Inspector "Tools" with tool name `triage_logs`.
+
+1) Error-focused triage for the last 6 hours:
+
+```json
+{
+  "log_path": "samples/demo.log",
+  "hours_lookback": 6,
+  "levels": ["error", "critical"],
+  "include_raw": true
+}
+```
+
+2) Specific time window:
+
+```json
+{
+  "log_path": "samples/demo.log",
+  "since": "2025-12-30T08:00:00Z",
+  "until": "2025-12-30T12:00:00Z",
+  "levels": ["warning", "error"],
+  "include_raw": true
+}
+```
+
+3) Include AI review:
+
+```json
+{
+  "log_path": "samples/demo.log",
+  "hours_lookback": 24,
+  "include_ai_review": true,
+  "include_raw": true
+}
+```
 
 ## Time Window Resolution
 
@@ -128,18 +185,27 @@ Install with extras:
 uv pip install -e ".[ai]"
 ```
 
-Environment variables:
-
-- `GEMINI_API_KEY` or `GOOGLE_API_KEY`
-- `LOG_TRIAGE_MAX_WORKERS` (optional, overrides default parser worker count)
-- `LOG_TRIAGE_AI_MAX_CONCURRENCY` (optional, overrides AI review concurrency)
-
 When `include_ai_review=true`:
 
 - Warning/error entries are excluded
 - Remaining lines are redacted and analyzed
 - Findings are returned under `ai_findings`
 - AI review requests run concurrently (see `AIReviewConfig.max_concurrent_requests`)
+
+---
+
+## Testing
+
+```bash
+pytest
+```
+
+---
+
+## Limitations and Notes
+
+- `.gz` files are processed serially to preserve ordering and because gzip is not easily splittable
+- AI review depends on external API limits and may require retries
 
 ---
 
@@ -166,6 +232,6 @@ When `include_ai_review=true`:
 - `src/mcp_log_triage_server/resources` - MCP resources
 - `src/mcp_log_triage_server/prompts` - MCP prompts
 - `src/mcp_log_triage_server/server` - MCP wiring and entrypoints
-- `tests` — mirrors `src`
-- `docs` — extended documentation
-- `samples` — example log files
+- `tests` - mirrors `src`
+- `docs` - extended documentation
+- `samples` - example log files
