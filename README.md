@@ -133,6 +133,7 @@ Environment variables:
 
 - `GEMINI_API_KEY` or `GOOGLE_API_KEY`
 - `LOG_TRIAGE_MAX_WORKERS` (optional, overrides default parser worker count)
+- `LOG_TRIAGE_AI_MAX_CONCURRENCY` (optional, overrides AI review concurrency)
 
 When `include_ai_review=true`:
 

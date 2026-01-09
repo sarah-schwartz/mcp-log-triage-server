@@ -15,7 +15,13 @@ from datetime import datetime
 
 from ..log_service import iter_entries
 from ..models import LogEntry, LogLevel
-from .models import AIFinding, AIReviewConfig, AIReviewResponse, AITriageResult
+from .models import (
+    AIFinding,
+    AIReviewConfig,
+    AIReviewResponse,
+    AITriageResult,
+    resolve_ai_review_config,
+)
 from .prompt import build_ai_review_prompt
 from .redaction import redact_text
 
@@ -195,8 +201,7 @@ async def review_non_error_logs(
     cfg: AIReviewConfig | None = None,
 ) -> AIReviewResponse:
     """Review non-identified logs by chunking and sending to AI."""
-    if cfg is None:
-        cfg = AIReviewConfig()
+    cfg = resolve_ai_review_config(cfg)
 
     # Limit iteration to identified and AI-review levels.
     wanted_levels = set(cfg.identified_levels) | set(cfg.ai_levels)
@@ -242,8 +247,7 @@ async def triage_with_ai_review(
     cfg: AIReviewConfig | None = None,
 ) -> AITriageResult:
     """Split logs into identified entries and AI findings."""
-    if cfg is None:
-        cfg = AIReviewConfig()
+    cfg = resolve_ai_review_config(cfg)
     _ = identified_limit
 
     identified_set = (
