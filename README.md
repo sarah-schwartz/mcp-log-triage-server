@@ -40,6 +40,9 @@ This project exposes a single primary MCP tool (`triage_logs`) along with suppor
 
 - **Async log IO**
   - Non-blocking scans to allow concurrent triage requests
+- **Parallel parsing (non-.gz)**
+  - Reader -> queue -> worker pool -> ordered aggregator (keeps line_no order)
+  - Tune with `LOG_TRIAGE_MAX_WORKERS`
 
 - **Optional AI review**
   - Reviews non-error signals
@@ -128,12 +131,15 @@ uv pip install -e ".[ai]"
 Environment variables:
 
 - `GEMINI_API_KEY` or `GOOGLE_API_KEY`
+- `LOG_TRIAGE_MAX_WORKERS` (optional, overrides default parser worker count)
+- `LOG_TRIAGE_AI_MAX_CONCURRENCY` (optional, overrides AI review concurrency)
 
 When `include_ai_review=true`:
 
 - Warning/error entries are excluded
 - Remaining lines are redacted and analyzed
 - Findings are returned under `ai_findings`
+- AI review requests run concurrently (see `AIReviewConfig.max_concurrent_requests`)
 
 ---
 
@@ -155,11 +161,11 @@ When `include_ai_review=true`:
 
 ## Project Structure
 
-- `src/mcp_log_triage_server/core` — parsing, filtering, time windows
-- `src/mcp_log_triage_server/tools` — MCP tool implementations
-- `src/mcp_log_triage_server/resources` — MCP resources
-- `src/mcp_log_triage_server/prompts` — MCP prompts
-- `src/mcp_log_triage_server/server` — MCP wiring and entrypoints
+- `src/mcp_log_triage_server/core` - parsing, filtering, time windows
+- `src/mcp_log_triage_server/tools` - MCP tool implementations
+- `src/mcp_log_triage_server/resources` - MCP resources
+- `src/mcp_log_triage_server/prompts` - MCP prompts
+- `src/mcp_log_triage_server/server` - MCP wiring and entrypoints
 - `tests` — mirrors `src`
 - `docs` — extended documentation
 - `samples` — example log files

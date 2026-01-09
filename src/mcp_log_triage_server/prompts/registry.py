@@ -51,45 +51,16 @@ def register_prompts(mcp: FastMCP) -> None:
     def triage_log_file(
         log_path: str,
         hours_lookback: int = 24,
-        levels: Sequence[str] | str = ("ERROR", "WARNING", "CRITICAL"),
-        since: str | None = None,
-        until: str | None = None,
-        date: str | None = None,
-        hour: str | None = None,
-        week: str | None = None,
-        month: str | None = None,
-        year: str | None = None,
-        days_lookback: int | None = None,
+        levels: list[str] | None = None,
     ) -> list[dict[str, Any]]:
         """Build a prompt for structured log triage."""
-        levels_display = _format_levels(levels)
-        time_lines: list[str] = []
-        if date is not None:
-            time_lines.append(f"- date: {date}")
-        elif hour is not None:
-            time_lines.append(f"- hour: {hour}")
-        elif week is not None:
-            time_lines.append(f"- week: {week}")
-        elif month is not None:
-            time_lines.append(f"- month: {month}")
-        elif year is not None:
-            time_lines.append(f"- year: {year}")
-        elif since is not None or until is not None:
-            if since is not None:
-                time_lines.append(f"- since: {since}")
-            if until is not None:
-                time_lines.append(f"- until: {until}")
-        elif days_lookback is not None:
-            time_lines.append(f"- days_lookback: {days_lookback}")
-        else:
-            time_lines.append(f"- hours_lookback: {hours_lookback}")
-        time_block = "\n".join(time_lines)
-        call_lines = [f"- log_path: {log_path}"]
-        if time_block:
-            call_lines.append(time_block)
-        call_lines.append(f"- levels: {levels_display}")
-        call_lines.append("- include_raw: true")
-        call_block = "\n".join(call_lines)
+        if levels is None:
+            levels = ["error", "warning", "critical"]
+        call_block = (
+            f"- log_path: {log_path}\n"
+            f"- hours_lookback: {hours_lookback}\n"
+            f"- levels: {_format_levels(levels)}\n"
+        )
         return [
             {
                 "role": "system",

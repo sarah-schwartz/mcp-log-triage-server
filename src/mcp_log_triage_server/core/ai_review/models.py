@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+import os
+from dataclasses import dataclass, replace
 from typing import Literal
 
 from pydantic import BaseModel, Field
@@ -48,6 +49,7 @@ class AIReviewConfig:
     temperature: float = 0.0
     redact: bool = True
     max_retries: int = 3
+    max_concurrent_requests: int = 3
 
 
 @dataclass(frozen=True, slots=True)
@@ -56,3 +58,24 @@ class AITriageResult:
 
     identified_entries: list[LogEntry]
     ai_review: AIReviewResponse
+
+
+def resolve_ai_review_config(cfg: AIReviewConfig | None) -> AIReviewConfig:
+    """Return config with optional env overrides applied."""
+    if cfg is None:
+        cfg = AIReviewConfig()
+
+    env = os.getenv("LOG_TRIAGE_AI_MAX_CONCURRENCY")
+    if env is None or env == "":
+        return cfg
+
+    try:
+        value = int(env)
+    except ValueError as exc:
+        raise ValueError("LOG_TRIAGE_AI_MAX_CONCURRENCY must be an integer") from exc
+    if value < 1:
+        raise ValueError("LOG_TRIAGE_AI_MAX_CONCURRENCY must be >= 1")
+
+    if value == cfg.max_concurrent_requests:
+        return cfg
+    return replace(cfg, max_concurrent_requests=value)

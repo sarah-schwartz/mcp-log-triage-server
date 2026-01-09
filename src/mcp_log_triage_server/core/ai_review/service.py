@@ -15,7 +15,13 @@ from datetime import datetime
 
 from ..log_service import iter_entries
 from ..models import LogEntry, LogLevel
-from .models import AIFinding, AIReviewConfig, AIReviewResponse, AITriageResult
+from .models import (
+    AIFinding,
+    AIReviewConfig,
+    AIReviewResponse,
+    AITriageResult,
+    resolve_ai_review_config,
+)
 from .prompt import build_ai_review_prompt
 from .redaction import redact_text
 
@@ -149,8 +155,12 @@ async def _review_segments(
     if not segments:
         return AIReviewResponse(findings=[])
 
+    if cfg.max_concurrent_requests < 1:
+        raise ValueError("max_concurrent_requests must be >= 1")
+
     findings: list[AIFinding] = []
     seen_hashes: set[str] = set()
+    segment_texts: list[str] = []
 
     for seg in segments:
         text = "\n".join(_fmt_line(e) for e in seg)
@@ -161,10 +171,17 @@ async def _review_segments(
         if h in seen_hashes:
             continue
         seen_hashes.add(h)
+        segment_texts.append(text)
 
-        prompt = build_ai_review_prompt(text, identified_levels=identified_levels)
+    semaphore = asyncio.Semaphore(cfg.max_concurrent_requests)
 
-        resp = await asyncio.to_thread(_call_gemini_json, prompt, cfg=cfg)
+    async def review_one(text: str) -> AIReviewResponse:
+        async with semaphore:
+            prompt = build_ai_review_prompt(text, identified_levels=identified_levels)
+            return await asyncio.to_thread(_call_gemini_json, prompt, cfg=cfg)
+
+    responses = await asyncio.gather(*(review_one(text) for text in segment_texts))
+    for resp in responses:
         for f in resp.findings:
             if f.confidence >= cfg.min_confidence:
                 findings.append(f)
@@ -184,8 +201,7 @@ async def review_non_error_logs(
     cfg: AIReviewConfig | None = None,
 ) -> AIReviewResponse:
     """Review non-identified logs by chunking and sending to AI."""
-    if cfg is None:
-        cfg = AIReviewConfig()
+    cfg = resolve_ai_review_config(cfg)
 
     # Limit iteration to identified and AI-review levels.
     wanted_levels = set(cfg.identified_levels) | set(cfg.ai_levels)
@@ -231,8 +247,7 @@ async def triage_with_ai_review(
     cfg: AIReviewConfig | None = None,
 ) -> AITriageResult:
     """Split logs into identified entries and AI findings."""
-    if cfg is None:
-        cfg = AIReviewConfig()
+    cfg = resolve_ai_review_config(cfg)
     _ = identified_limit
 
     identified_set = (

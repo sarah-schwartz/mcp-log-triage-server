@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import threading
+import time
+
 import pytest
 
 from mcp_log_triage_server.core.ai_review import (
@@ -10,6 +13,7 @@ from mcp_log_triage_server.core.ai_review import (
     review_non_error_logs,
 )
 from mcp_log_triage_server.core.ai_review import service as ai_service
+from mcp_log_triage_server.core.ai_review.models import resolve_ai_review_config
 from mcp_log_triage_server.core.models import LogEntry, LogLevel
 
 
@@ -115,3 +119,51 @@ async def test_review_non_error_logs_excludes_identified_levels(tmp_path, monkey
     )
 
     assert "[WARNING]" not in captured["prompt"]
+
+
+def test_resolve_ai_review_config_env_override(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("LOG_TRIAGE_AI_MAX_CONCURRENCY", "2")
+    cfg = resolve_ai_review_config(None)
+    assert cfg.max_concurrent_requests == 2
+
+
+def test_resolve_ai_review_config_invalid_env_raises(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("LOG_TRIAGE_AI_MAX_CONCURRENCY", "0")
+    with pytest.raises(ValueError, match="LOG_TRIAGE_AI_MAX_CONCURRENCY"):
+        _ = resolve_ai_review_config(None)
+
+
+@pytest.mark.asyncio
+async def test_review_segments_respects_max_concurrency(monkeypatch) -> None:
+    segments = [
+        [LogEntry(line_no=1, timestamp=None, level=LogLevel.INFO, message="a")],
+        [LogEntry(line_no=2, timestamp=None, level=LogLevel.INFO, message="b")],
+        [LogEntry(line_no=3, timestamp=None, level=LogLevel.INFO, message="c")],
+    ]
+
+    lock = threading.Lock()
+    current = 0
+    max_seen = 0
+
+    def fake_call(prompt: str, *, cfg) -> AIReviewResponse:
+        nonlocal current, max_seen
+        with lock:
+            current += 1
+            max_seen = max(max_seen, current)
+        time.sleep(0.05)
+        with lock:
+            current -= 1
+        return AIReviewResponse(findings=[])
+
+    monkeypatch.setattr(ai_service, "_call_gemini_json", fake_call)
+
+    cfg = ai_service.AIReviewConfig(max_concurrent_requests=1)
+    await ai_service._review_segments(
+        segments,
+        cfg=cfg,
+        identified_levels={LogLevel.ERROR},
+    )
+
+    assert max_seen <= cfg.max_concurrent_requests
