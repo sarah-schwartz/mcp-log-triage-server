@@ -118,9 +118,7 @@ def register_prompts(mcp: FastMCP) -> None:
     ) -> list[dict[str, Any]]:
         """Build a prompt that produces a Markdown bug report."""
         call_block = (
-            f"- log_path: {log_path}\n"
-            f"- hours_lookback: {hours_lookback}\n"
-            "- include_raw: true\n"
+            f"- log_path: {log_path}\n- hours_lookback: {hours_lookback}\n- include_raw: true\n"
         )
         return [
             {
