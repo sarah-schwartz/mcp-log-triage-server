@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import time
+import threading
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -84,10 +84,14 @@ async def test_iter_entries_parallel_preserves_order(tmp_path: Path) -> None:
     path = tmp_path / "app.log"
     lines = [f"line {i}" for i in range(1, 7)]
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    release_first = threading.Event()
 
     class SlowParser:
         def parse(self, line_no: int, line: str) -> LogEntry | None:
-            time.sleep(0.01 * (7 - line_no))
+            if line_no == len(lines):
+                release_first.set()
+            if line_no == 1:
+                release_first.wait()
             return LogEntry(
                 line_no=line_no,
                 timestamp=None,
