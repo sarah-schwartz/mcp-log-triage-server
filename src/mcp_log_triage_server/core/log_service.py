@@ -5,8 +5,8 @@ This module is the main integration point that reads log files and returns norma
 
 from __future__ import annotations
 
-import gzip
 import asyncio
+import gzip
 import os
 from collections.abc import AsyncIterator, Awaitable, Callable, Iterable
 from concurrent.futures import ThreadPoolExecutor

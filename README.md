@@ -40,7 +40,6 @@ This project exposes a single primary MCP tool (`triage_logs`) along with suppor
 
 - **Async log IO**
   - Non-blocking scans to allow concurrent triage requests
-
 - **Parallel parsing (non-.gz)**
   - Reader -> queue -> worker pool -> ordered aggregator (keeps line_no order)
   - Tune with `LOG_TRIAGE_MAX_WORKERS`
@@ -162,11 +161,11 @@ When `include_ai_review=true`:
 
 ## Project Structure
 
-- `src/mcp_log_triage_server/core` — parsing, filtering, time windows
-- `src/mcp_log_triage_server/tools` — MCP tool implementations
-- `src/mcp_log_triage_server/resources` — MCP resources
-- `src/mcp_log_triage_server/prompts` — MCP prompts
-- `src/mcp_log_triage_server/server` — MCP wiring and entrypoints
+- `src/mcp_log_triage_server/core` - parsing, filtering, time windows
+- `src/mcp_log_triage_server/tools` - MCP tool implementations
+- `src/mcp_log_triage_server/resources` - MCP resources
+- `src/mcp_log_triage_server/prompts` - MCP prompts
+- `src/mcp_log_triage_server/server` - MCP wiring and entrypoints
 - `tests` — mirrors `src`
 - `docs` — extended documentation
 - `samples` — example log files

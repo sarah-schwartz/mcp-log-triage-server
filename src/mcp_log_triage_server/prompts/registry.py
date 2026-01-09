@@ -37,9 +37,11 @@ def register_prompts(mcp: FastMCP) -> None:
     def triage_log_file(
         log_path: str,
         hours_lookback: int = 24,
-        levels: str = "ERROR,WARNING,CRITICAL",
+        levels: list[str] | None = None,
     ) -> list[dict[str, Any]]:
         """Build a prompt for structured log triage."""
+        if levels is None:
+            levels = ["error", "warning", "critical"]
         return [
             {
                 "role": "system",

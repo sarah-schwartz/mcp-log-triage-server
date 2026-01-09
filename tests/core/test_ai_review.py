@@ -12,8 +12,8 @@ from mcp_log_triage_server.core.ai_review import (
     _split_entries_for_ai,
     review_non_error_logs,
 )
-from mcp_log_triage_server.core.ai_review.models import resolve_ai_review_config
 from mcp_log_triage_server.core.ai_review import service as ai_service
+from mcp_log_triage_server.core.ai_review.models import resolve_ai_review_config
 from mcp_log_triage_server.core.models import LogEntry, LogLevel
 
 
