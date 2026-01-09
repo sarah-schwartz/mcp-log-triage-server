@@ -31,7 +31,9 @@ python -m mcp_log_triage_server
   - Access logs (Common / Combined)
   - Bracketed timestamps
   - JSON lines
-  - CEF, logfmt, LTSV
+  - CEF (Common Event Format)
+  - logfmt
+  - LTSV
   - Loose keyword-based logs
 
 - **Filtering**
@@ -127,43 +129,18 @@ Response (shape):
 }
 ```
 
-## Inspector examples
+## Supported Log Formats
 
-Use these payloads in MCP Inspector "Tools" with tool name `triage_logs`.
+The parser chain supports:
 
-1) Error-focused triage for the last 6 hours:
-
-```json
-{
-  "log_path": "samples/demo.log",
-  "hours_lookback": 6,
-  "levels": ["error", "critical"],
-  "include_raw": true
-}
-```
-
-2) Specific time window:
-
-```json
-{
-  "log_path": "samples/demo.log",
-  "since": "2025-12-30T08:00:00Z",
-  "until": "2025-12-30T12:00:00Z",
-  "levels": ["warning", "error"],
-  "include_raw": true
-}
-```
-
-3) Include AI review:
-
-```json
-{
-  "log_path": "samples/demo.log",
-  "hours_lookback": 24,
-  "include_ai_review": true,
-  "include_raw": true
-}
-```
+- Syslog (RFC5424 / RFC3164)
+- Access logs (Common / Combined)
+- Bracketed timestamps
+- JSON lines (one JSON object per line)
+- CEF (Common Event Format)
+- logfmt
+- LTSV
+- Loose keyword-based logs
 
 ## Time Window Resolution
 
