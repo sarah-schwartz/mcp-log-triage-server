@@ -10,6 +10,10 @@ from typing import Any
 from mcp.server.fastmcp import FastMCP
 
 
+def _format_levels(levels: list[str]) -> str:
+    return ", ".join(levels)
+
+
 def register_prompts(mcp: FastMCP) -> None:
     """Register prompt templates on the MCP server."""
 
@@ -42,6 +46,11 @@ def register_prompts(mcp: FastMCP) -> None:
         """Build a prompt for structured log triage."""
         if levels is None:
             levels = ["error", "warning", "critical"]
+        call_block = (
+            f"- log_path: {log_path}\n"
+            f"- hours_lookback: {hours_lookback}\n"
+            f"- levels: {_format_levels(levels)}\n"
+        )
         return [
             {
                 "role": "system",
@@ -58,10 +67,8 @@ def register_prompts(mcp: FastMCP) -> None:
                     "2) Evidence (quote key lines)\n"
                     "3) Suspected root cause\n"
                     "4) Next actions\n\n"
-                    f"Use tool triage_logs with:\n"
-                    f"- log_path: {log_path}\n"
-                    f"- hours_lookback: {hours_lookback}\n"
-                    f"- levels: {levels}\n"
+                    "Use tool triage_logs with:\n"
+                    f"{call_block}\n"
                 ),
             },
             {
