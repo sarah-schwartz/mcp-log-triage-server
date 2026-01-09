@@ -1,7 +1,7 @@
 from __future__ import annotations
 
+import asyncio
 import threading
-import time
 
 import pytest
 
@@ -144,6 +144,8 @@ async def test_review_segments_respects_max_concurrency(monkeypatch) -> None:
     ]
 
     lock = threading.Lock()
+    started = threading.Event()
+    allow_exit = threading.Event()
     current = 0
     max_seen = 0
 
@@ -152,7 +154,10 @@ async def test_review_segments_respects_max_concurrency(monkeypatch) -> None:
         with lock:
             current += 1
             max_seen = max(max_seen, current)
-        time.sleep(0.05)
+            if current > 1:
+                raise AssertionError("Exceeded max concurrency")
+            started.set()
+        allow_exit.wait()
         with lock:
             current -= 1
         return AIReviewResponse(findings=[])
@@ -160,10 +165,15 @@ async def test_review_segments_respects_max_concurrency(monkeypatch) -> None:
     monkeypatch.setattr(ai_service, "_call_gemini_json", fake_call)
 
     cfg = ai_service.AIReviewConfig(max_concurrent_requests=1)
-    await ai_service._review_segments(
-        segments,
-        cfg=cfg,
-        identified_levels={LogLevel.ERROR},
+    task = asyncio.create_task(
+        ai_service._review_segments(
+            segments,
+            cfg=cfg,
+            identified_levels={LogLevel.ERROR},
+        )
     )
 
+    await asyncio.to_thread(started.wait)
+    allow_exit.set()
+    await task
     assert max_seen <= cfg.max_concurrent_requests

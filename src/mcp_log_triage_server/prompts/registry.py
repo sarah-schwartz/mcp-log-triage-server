@@ -84,6 +84,10 @@ def register_prompts(mcp: FastMCP) -> None:
         hours_lookback: int = 24,
     ) -> list[dict[str, Any]]:
         """Build a prompt that produces a Markdown bug report."""
+        call_block = (
+            f"- log_path: {log_path}\n"
+            f"- hours_lookback: {hours_lookback}\n"
+        )
         return [
             {
                 "role": "system",
@@ -102,7 +106,8 @@ def register_prompts(mcp: FastMCP) -> None:
                     "- Suspected Cause\n"
                     "- Suggested Fix / Next Actions\n\n"
                     f"Steps provided:\n{steps}\n\n"
-                    f"Use tool triage_logs on {log_path} for last {hours_lookback} hours.\n"
+                    "Call triage_logs with:\n"
+                    f"{call_block}\n"
                 ),
             },
             {
