@@ -27,14 +27,7 @@ python -m mcp_log_triage_server
 ## Core Capabilities
 
 - **Log parsing**
-  - Syslog (RFC5424 / RFC3164)
-  - Access logs (Common / Combined)
-  - Bracketed timestamps
-  - JSON lines
-  - CEF (Common Event Format)
-  - logfmt
-  - LTSV
-  - Loose keyword-based logs
+  - See Supported Log Formats
 
 - **Filtering**
   - Time windows: `since` / `until`, `date`, `hour`, `week`, `month`, `year`
@@ -141,6 +134,18 @@ The parser chain supports:
 - logfmt
 - LTSV
 - Loose keyword-based logs
+
+---
+
+## Documentation
+
+- `docs/index.md` - documentation index
+- `docs/getting-started/quickstart.md` - setup and quickstart
+- `docs/reference/log-formats.md` - log format details
+- `docs/reference/configuration.md` - configuration options
+- `docs/guides/tools.md` - tool usage
+- `docs/guides/ai-review.md` - AI review behavior
+- `docs/guides/prompts.md` - prompt templates
 
 ## Time Window Resolution
 
